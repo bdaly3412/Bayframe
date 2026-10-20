@@ -1,19 +1,21 @@
 # Technology stack
 
-Status: proposed, 20 October 2026. No application dependencies are installed or
-pinned. This file owns tool selection; ADRs own the reasons for major choices.
+Status: foundation pinned and ADR-001 through ADR-003 accepted, 20 October 2026.
+Later-stage tools remain uninstalled. This file owns tool selection; ADRs own
+the reasons for major choices.
 
-| Area | Proposed choice | Introduction point |
+| Area | Choice / selection status | Introduction point |
 | --- | --- | --- |
-| Runtime and package manager | Supported Node.js release, pnpm | Bootstrap; pin versions and check clean installation |
-| Language | Strict TypeScript | Bootstrap |
-| Application | React, Next.js App Router | Bootstrap; one application deployment |
-| Styling | Tailwind CSS, small application-owned components | First functional interfaces |
+| Runtime and package manager | Node.js 24.13.0 LTS, pnpm 11.25.0 | BF-003; exact runtime and lockfile declarations |
+| Language | Strict TypeScript 5.9.3 | BF-003 |
+| Application | React / React DOM 19.3.1, Next.js App Router 16.4.2 | BF-003; local public status page |
+| Styling | Tailwind CSS / PostCSS plugin 4.3.3, PostCSS 8.5.31 | BF-003; application-owned markup |
 | Database | PostgreSQL | Foundation; record actual major/minor version |
 | Persistence | Drizzle ORM and versioned SQL migrations | First schema; custom SQL where necessary |
 | Authentication | Supabase Auth | First staff access path; ADR-003 |
 | Boundary validation | Zod | First external-input boundary |
-| Unit/integration tests | Vitest; real PostgreSQL for database guarantees | First domain behaviour and schema |
+| Unit/integration tests | Vitest 5.0.5, Vite 7.3.7; real PostgreSQL later | BF-003 rendering smoke test; domain tests begin BF-004 |
+| Linting | ESLint 9.39.4, eslint-config-next 16.4.2 | BF-003; Core Web Vitals and TypeScript rules |
 | Browser tests | Playwright | First end-to-end workflow |
 | CI | GitHub Actions | Once local checks are reproducible |
 | Local infrastructure | Docker and local Supabase | Foundation; engine readiness required |
@@ -23,10 +25,11 @@ pinned. This file owns tool selection; ADRs own the reasons for major choices.
 
 ## BF-002 reviewed bootstrap baseline
 
-Recommended for owner acceptance; technical ADRs remain proposed:
+Accepted by the project owner on 20 October 2026:
 
 - Supported Node.js 24 LTS patch and pnpm; resolve/pin exact compatible versions
-  in BF-003, including a lockfile and package-manager/runtime declarations.
+  in BF-003, including a lockfile and package-manager/runtime declarations. Exact
+  versions are now recorded above and in `package.json` / `.node-version`.
 - Next.js App Router on Node.js, strict TypeScript, `src/app`, `@/*`, Tailwind CSS,
   ESLint and Vitest. No experimental opt-ins or extra component library initially.
 - One local Supabase application/auth database, Drizzle application migrations
@@ -36,13 +39,22 @@ Recommended for owner acceptance; technical ADRs remain proposed:
   booking logic, dashboard screens, browser-test infrastructure and CI. Add these
   in their owning stage, not as speculative bootstrap dependencies.
 
+BF-003 resolves packages from the registry and checks their runtime/peer
+requirements. ESLint 9 avoids the documented ESLint 10 plugin peer warnings;
+TypeScript 5.9 stays within the lint parser's supported range. Vite 7 supplies
+Vitest's compatible transform/runtime baseline. Node types match major 24.
+pnpm enforces strict peer and engine checks, pins its script runtime via
+`devEngines.runtime`, and allows only the required dependency build scripts.
+See [setup commands](README.md#setup-and-verification) and
+[executed evidence](ROADMAP.md#evidence-and-limitations).
+
 ## Selection and installation rules
 
 - Check current official documentation, runtime requirements and compatible
   package versions before recommending APIs or installing dependencies.
 - Add dependencies only when the approved phase uses them. Pin the runtime and
   package-manager versions; keep the lockfile under source control via the owner.
-- Use one application migration history. Proposed owner: Drizzle. Do not let
+- Use one application migration history. Accepted owner: Drizzle. Do not let
   Supabase CLI and Drizzle independently manage the same application tables.
 - Review generated SQL, extensions and constraints. Successful ORM generation
   does not prove that a required database invariant exists.
@@ -54,6 +66,11 @@ Recommended for owner acceptance; technical ADRs remain proposed:
 ## Official references
 
 - [Next.js](https://nextjs.org/docs)
+- [Next.js installation](https://nextjs.org/docs/app/getting-started/installation)
+- [Next.js ESLint compatibility](https://nextjs.org/docs/app/api-reference/config/eslint)
+- [Node.js 24.13.0 LTS](https://nodejs.org/en/blog/release/v24.13.0)
+- [pnpm settings](https://pnpm.io/settings)
+- [Tailwind CSS with Next.js](https://tailwindcss.com/docs/installation/framework-guides/nextjs)
 - [PostgreSQL](https://www.postgresql.org/docs/current/)
 - [Drizzle](https://orm.drizzle.team/docs/overview)
 - [Supabase](https://supabase.com/docs)

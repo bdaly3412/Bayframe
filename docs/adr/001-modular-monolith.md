@@ -1,6 +1,6 @@
 # ADR-001: Modular monolith
 
-Status: proposed. Date: 20 October 2026. Decision owner: project owner.
+Status: accepted by the project owner on 20 October 2026. Decision owner: project owner.
 
 ## Context
 
@@ -21,7 +21,7 @@ deployment and distributed-system work unrelated to current requirements.
 | Separate frontend/backend | Independent API lifecycle and runtime choice | Two deployments, contracts and auth integration surfaces |
 | Microservices | Independent scaling/ownership for established boundaries | Distributed consistency, networking, observability and operational burden |
 
-## Proposed decision
+## Decision
 
 Use one Next.js application with feature-oriented domain services and scoped
 persistence. Keep React/framework handlers thin. Avoid service abstractions or
@@ -51,7 +51,7 @@ team boundary justifies extraction. Portfolio appearance alone does not.
 
 ## Acceptance discussion
 
-Reviewed in BF-002 on 20 October 2026. Recommended for owner acceptance:
+Reviewed in BF-002 and accepted by the project owner on 20 October 2026:
 
 - One Next.js App Router application on the Node.js runtime; no Edge runtime or
   separately deployed API. No required independent API consumer is identified.
@@ -64,5 +64,5 @@ Reviewed in BF-002 on 20 October 2026. Recommended for owner acceptance:
   No dashboard, auth, database client or empty feature-service scaffolding in
   BF-003. Add modules when their first behaviour requires them.
 
-This is an architectural recommendation, not owner acceptance or runtime
-verification. No production guarantee follows from this review.
+Owner acceptance records the architecture choice. It does not establish runtime
+verification or a production guarantee.

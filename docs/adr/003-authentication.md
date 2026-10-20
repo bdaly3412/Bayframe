@@ -1,6 +1,6 @@
 # ADR-003: Managed authentication
 
-Status: proposed. Date: 20 October 2026. Decision owner: project owner.
+Status: accepted by the project owner on 20 October 2026. Decision owner: project owner.
 
 ## Context
 
@@ -21,7 +21,7 @@ an authentication provider automatically secures direct database queries.
 | Other managed provider | Comparable identity capabilities | Additional integration/evaluation; no demonstrated requirement to switch |
 | Supabase Auth | Managed identity and local platform fit | SSR/cookie integration, provider coupling and application authorization still required |
 
-## Proposed decision
+## Decision
 
 Use Supabase Auth for staff identity and current official Next.js server-side
 integration guidance. Resolve role and active workshop membership from trusted
@@ -62,7 +62,7 @@ solely for architectural variety.
 
 ## Acceptance discussion
 
-Reviewed in BF-002 on 20 October 2026. Recommended for owner acceptance:
+Reviewed in BF-002 and accepted by the project owner on 20 October 2026:
 
 - Supabase Auth provides staff identity; trusted application staff records hold
   role, active flag and workshop membership. Check membership on each protected
@@ -86,8 +86,8 @@ Reviewed in BF-002 on 20 October 2026. Recommended for owner acceptance:
   claimed; define stricter revocation requirements before sensitive deployment.
 
 Customer approval links remain a later separate capability flow. No remote auth
-service, email delivery or account changes are authorized. This is a reviewed
-proposal; only owner acceptance changes the ADR status.
+service, email delivery or account changes are authorized. Owner acceptance
+records the design, not implemented authentication or authorization.
 
 References: [Supabase server-side auth](https://supabase.com/docs/guides/auth/server-side/creating-a-client),
 [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).

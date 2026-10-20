@@ -1,6 +1,6 @@
 # ADR-002: PostgreSQL resource scheduling
 
-Status: proposed. Date: 20 October 2026. Decision owner: project owner.
+Status: accepted by the project owner on 20 October 2026. Decision owner: project owner.
 
 ## Context
 
@@ -22,7 +22,7 @@ audit events atomic under confirmation, cancellation and rescheduling races.
 | Serializable transactions | Broad anomaly detection | Retry handling required; does not express the domain rule directly |
 | Range exclusion plus deliberate transactions/booking locking | Database expresses non-overlap; application coordinates lifecycle | PostgreSQL-specific SQL, extension and real concurrency tests |
 
-## Proposed decision
+## Decision
 
 Use PostgreSQL timezone-aware range overlap with a GiST exclusion constraint per
 resource, applying to active unreleased allocations. Use half-open `[start, end)`
@@ -63,7 +63,7 @@ with frontend checks to improve apparent responsiveness.
 
 ## Acceptance discussion
 
-Reviewed in BF-002 on 20 October 2026. Recommended for owner acceptance:
+Reviewed in BF-002 and accepted by the project owner on 20 October 2026:
 
 - PostgreSQL in local Supabase is the one local application/auth database. Use
   real matching PostgreSQL capabilities in integration checks; no SQLite stand-in.
@@ -88,7 +88,7 @@ Reviewed in BF-002 on 20 October 2026. Recommended for owner acceptance:
 
 BF-003 installs no database tools or schema. BF-005 establishes infrastructure;
 BF-006 introduces only workshop, staff and resources. Allocation/booking SQL is
-part of BF-009 after its detailed issue is approved. This proposal is not a claim
+part of BF-009 after its detailed issue is approved. This accepted design is not a claim
 that any database guarantee has been implemented.
 
 Reference: [PostgreSQL range types and constraints](https://www.postgresql.org/docs/current/rangetypes.html).

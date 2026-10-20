@@ -4,16 +4,17 @@ Updated: 20 October 2026.
 
 ## Current state
 
-Documentation and local ignore policy are committed through `3d6ebba`; the remote
-`main` was verified at the same commit on 20 October 2026. Application
-implementation has not started. BF-002 architectural review is complete; the
-three ADRs contain concrete recommendations and remain proposed for owner
-acceptance. Repository history changes remain owner-controlled.
+The checkout started clean on `main` at `66373eb` on 20 October 2026. The owner
+accepted ADR-001 through ADR-003 and authorized BF-003 only. BF-002 is complete.
+BF-003 implementation and local verification are complete and ready for owner
+review: one public status page, pinned tooling and a rendering smoke test.
+Changes remain unstaged and uncommitted. No remote state was changed or rechecked
+in BF-003. Repository history changes remain owner-controlled.
 
 The initial planning window is 20 October–16 November 2026, with a provisional
 72–100 focused-hour budget. Re-estimate after the first working database and
 authentication slice; do not claim tracked time retroactively.
-Actual active time has not been recorded for this documentation phase.
+Actual active time has not been recorded for BF-002 or BF-003.
 
 ## Milestones
 
@@ -41,9 +42,9 @@ deliverable.
 | ID / state | Objective and reason | Dependencies | Estimated effort / owner | Acceptance and verification |
 | --- | --- | --- | --- | --- |
 | BF-001 / Done | Project documentation; preserve scope and operating rules | Initial scope agreement | Estimate not recorded / Engineering, owner review | Owner committed the reviewed foundation as `abf957f`; documentation checks passed |
-| BF-002 / Review | Review three ADRs and resolve bootstrap assumptions; avoid competing architectures | BF-001 complete | 1–2h estimated; actual not recorded / Owner review | Concrete runtime, migration, access and first-schema recommendations recorded; owner acceptance outstanding |
-| BF-003 / Ready | Bootstrap Next.js, strict TypeScript, pnpm and Vitest; reproducible engineering baseline | Owner accepts BF-002 ADRs and authorizes BF-003 | 2–3h / Engineering | Clean install, development route, lint, typecheck, unit test and build actually succeed; versions/commands documented |
-| BF-004 / Backlog | Interval semantics; establish back-to-back scheduling behaviour | BF-003 | 1–2h / Engineering | Overlap, containment, adjacency, symmetry and invalid-interval unit tests pass |
+| BF-002 / Done | Review three ADRs and resolve bootstrap assumptions; avoid competing architectures | BF-001 complete | 1–2h estimated; actual not recorded / Owner review | Owner accepted ADR-001 through ADR-003 on 20 October 2026; no database/auth implementation implied |
+| BF-003 / Review | Bootstrap Next.js, strict TypeScript, pnpm and Vitest; reproducible engineering baseline | Accepted BF-002; owner authorized BF-003 | 2–3h estimated; actual not recorded / Engineering, owner review | Clean frozen install, development route, lint, standalone typecheck, 1 rendering test, production build and desktop/mobile browser checks passed; manual commit outstanding |
+| BF-004 / Ready | Interval semantics; establish back-to-back scheduling behaviour | Owner reviews BF-003 and separately authorizes BF-004 | 1–2h / Engineering | Overlap, containment, adjacency, symmetry and invalid-interval unit tests pass |
 | BF-005 / Backlog | Local database and migration baseline; reproduce persistence | BF-002, Docker engine available | 3–4h / Engineering | Migrations apply to empty disposable DB; DB version/extension availability recorded; no remote DB changed |
 | BF-006 / Backlog | Workshop, staff and resources; enforce ownership | BF-005 | 3–4h / Engineering | Positive fixtures and invalid relationship/uniqueness tests run on real PostgreSQL |
 | BF-007 / Backlog | Staff login and protected resource read; prove access boundary | BF-003, BF-006 | 3–4h / Engineering | Valid staff succeeds; anonymous, inactive/non-staff and wrong-role cases fail; no privileged data path exposed |
@@ -75,25 +76,53 @@ accepted; do not silently remove the required end-to-end workflow.
   diff passed `git diff --check`; the owner subsequently committed the foundation.
 - 19 October: Docker CLI/Compose were available, but the Linux engine was
   unreachable. Recheck before database setup; do not assume it remains stopped.
-- No garage-operator validation, runtime tests, migration tests, browser tests,
-  remote CI or deployment evidence exists yet.
+- No garage-operator validation, database runtime/migration tests, automated
+  end-to-end suite, remote CI or deployment evidence exists yet.
 - The owner committed the documentation foundation as `abf957f` on 20 October.
   The later ignore-policy commit is `3d6ebba`; read-only remote verification found
   the same SHA on `refs/heads/main`. The prior access blocker is resolved for that
-  publication. Application code/tests are absent.
+  publication. BF-003 subsequently added the application foundation described below.
 - Shared ignore rules cover dependencies, generated builds, local credentials,
   test results and artifacts. Local setup does not change application readiness.
 - BF-002 reviewed official Next.js, PostgreSQL, Drizzle and Supabase documentation
-  and specified the baseline in ADR-001 through ADR-003. These are design choices
-  awaiting acceptance, not runtime/migration/security evidence.
+  and specified the baseline in ADR-001 through ADR-003. The owner accepted all
+  three on 20 October. Acceptance is not database/migration/security evidence.
+- BF-003: Node.js 24.13.0 and pnpm 11.25.0 are declared exactly. Next.js 16.4.2,
+  React/React DOM 19.3.1, Tailwind 4.3.3, TypeScript 5.9.3, ESLint 9.39.4 and
+  Vitest 5.0.5 are pinned, with compatible dependencies in the lockfile. Runtime
+  and peer requirements were checked against package metadata and official docs.
+- Executed from the repository root: `pnpm install --frozen-lockfile`, `pnpm
+  lint`, `pnpm typecheck`, `pnpm test` and `pnpm build` all passed. The one test
+  renders the actual page using React DOM's server renderer and the `@/*` alias.
+  Production build prerenders `/` and `/icon.svg`; no application data path exists.
+- A fresh dependency directory at
+  `output/verification/clean-install-0a8cd232` passed `pnpm --dir
+  output/verification/clean-install-0a8cd232 install --frozen-lockfile`. A copy of
+  the public source/config also passed standalone typecheck and the test there
+  without generated Next.js files or private configuration. Dependencies used a
+  shared local package cache; this was not a cache-empty or second-machine check.
+- Development command `pnpm dev --hostname 127.0.0.1 --port 3001` served `/` with
+  HTTP 200 and expected content. Production command `pnpm start --hostname
+  127.0.0.1 --port 3000` was inspected in Chromium at 1440×1000 and 390×844.
+  Title/content, responsive wrapping, visible keyboard skip link and focus moving
+  to main passed. Mobile document width matched the 390px viewport. Final browser
+  console had zero errors/warnings and all nine recorded requests returned 200.
+  Local screenshots/snapshots are in `output/playwright/` (ignored).
+- The first browser pass found a missing favicon; an application-owned SVG icon
+  resolved it. A bounded source review found no remaining actionable defects.
+  UI review retained the brief's system typography and restrained layout.
+- Public-file inspection and `git diff --check` passed. Private configuration,
+  instructions, browser session data and output artifacts remain excluded. The
+  staging area is empty. Git exclusions alone do not prove release packaging;
+  inspect that at the separately authorized release stage.
 
 ## Next action
 
-Owner reviews/commits the architecture recommendations, then accepts ADR-001
-through ADR-003 and authorizes BF-003 bootstrap. No application scaffolding was
-performed in BF-002. BF-003 scope and checks are below.
+Owner reviews the BF-003 diff and stages/commits only the explicit public files.
+Then authorize BF-004 interval semantics in a fresh task. BF-004 is ready but has
+not been started or authorized. Database/auth work remains in later stages.
 
-Suggested owner commit message: `docs: clarify architecture and bootstrap scope`.
+Suggested owner commit message: `feat: bootstrap application foundation`.
 
 ## BF-003 implementation contract
 
