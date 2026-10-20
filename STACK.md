@@ -21,6 +21,21 @@ pinned. This file owns tool selection; ADRs own the reasons for major choices.
 | Error monitoring | Sentry if justified | Release review; no provisioning authorized |
 | Deployment | Vercel and managed PostgreSQL under consideration | Separate deployment decision and approval |
 
+## BF-002 reviewed bootstrap baseline
+
+Recommended for owner acceptance; technical ADRs remain proposed:
+
+- Supported Node.js 24 LTS patch and pnpm; resolve/pin exact compatible versions
+  in BF-003, including a lockfile and package-manager/runtime declarations.
+- Next.js App Router on Node.js, strict TypeScript, `src/app`, `@/*`, Tailwind CSS,
+  ESLint and Vitest. No experimental opt-ins or extra component library initially.
+- One local Supabase application/auth database, Drizzle application migrations
+  and `pg` driver when database work begins. Business schema `app` stays outside
+  Data API exposure; runtime and migration privileges are separate.
+- BF-003 excludes Supabase/Drizzle/Zod installation, database setup, authentication,
+  booking logic, dashboard screens, browser-test infrastructure and CI. Add these
+  in their owning stage, not as speculative bootstrap dependencies.
+
 ## Selection and installation rules
 
 - Check current official documentation, runtime requirements and compatible

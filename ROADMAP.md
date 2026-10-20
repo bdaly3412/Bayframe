@@ -4,10 +4,11 @@ Updated: 20 October 2026.
 
 ## Current state
 
-Documentation foundation committed locally as `abf957f`. Application
-implementation has not started. Remote publication is not verified.
-Technical ADRs are proposed and require owner review. Repository history changes
-remain owner-controlled.
+Documentation and local ignore policy are committed through `3d6ebba`; the remote
+`main` was verified at the same commit on 20 October 2026. Application
+implementation has not started. BF-002 architectural review is complete; the
+three ADRs contain concrete recommendations and remain proposed for owner
+acceptance. Repository history changes remain owner-controlled.
 
 The initial planning window is 20 October–16 November 2026, with a provisional
 72–100 focused-hour budget. Re-estimate after the first working database and
@@ -40,8 +41,8 @@ deliverable.
 | ID / state | Objective and reason | Dependencies | Estimated effort / owner | Acceptance and verification |
 | --- | --- | --- | --- | --- |
 | BF-001 / Done | Project documentation; preserve scope and operating rules | Initial scope agreement | Estimate not recorded / Engineering, owner review | Owner committed the reviewed foundation as `abf957f`; documentation checks passed |
-| BF-002 / Ready | Review three ADRs and resolve bootstrap assumptions; avoid competing architectures | BF-001 review | 1–2h / Owner review | ADR statuses explicitly decided; migration owner, DB access, runtime and first schema scope agreed |
-| BF-003 / Backlog | Bootstrap Next.js, strict TypeScript, pnpm and Vitest; reproducible engineering baseline | BF-002 and phase approval | 2–3h / Engineering | Clean install, development route, lint, typecheck, unit test and build actually succeed; versions/commands documented |
+| BF-002 / Review | Review three ADRs and resolve bootstrap assumptions; avoid competing architectures | BF-001 complete | 1–2h estimated; actual not recorded / Owner review | Concrete runtime, migration, access and first-schema recommendations recorded; owner acceptance outstanding |
+| BF-003 / Ready | Bootstrap Next.js, strict TypeScript, pnpm and Vitest; reproducible engineering baseline | Owner accepts BF-002 ADRs and authorizes BF-003 | 2–3h / Engineering | Clean install, development route, lint, typecheck, unit test and build actually succeed; versions/commands documented |
 | BF-004 / Backlog | Interval semantics; establish back-to-back scheduling behaviour | BF-003 | 1–2h / Engineering | Overlap, containment, adjacency, symmetry and invalid-interval unit tests pass |
 | BF-005 / Backlog | Local database and migration baseline; reproduce persistence | BF-002, Docker engine available | 3–4h / Engineering | Migrations apply to empty disposable DB; DB version/extension availability recorded; no remote DB changed |
 | BF-006 / Backlog | Workshop, staff and resources; enforce ownership | BF-005 | 3–4h / Engineering | Positive fixtures and invalid relationship/uniqueness tests run on real PostgreSQL |
@@ -77,15 +78,49 @@ accepted; do not silently remove the required end-to-end workflow.
 - No garage-operator validation, runtime tests, migration tests, browser tests,
   remote CI or deployment evidence exists yet.
 - The owner committed the documentation foundation as `abf957f` on 20 October.
-  A subsequent push failed with an access error; remote publication remains
-  blocked pending authorized repository access. Application code/tests are absent.
+  The later ignore-policy commit is `3d6ebba`; read-only remote verification found
+  the same SHA on `refs/heads/main`. The prior access blocker is resolved for that
+  publication. Application code/tests are absent.
 - Shared ignore rules cover dependencies, generated builds, local credentials,
   test results and artifacts. Local setup does not change application readiness.
+- BF-002 reviewed official Next.js, PostgreSQL, Drizzle and Supabase documentation
+  and specified the baseline in ADR-001 through ADR-003. These are design choices
+  awaiting acceptance, not runtime/migration/security evidence.
 
 ## Next action
 
-Owner commits the ignore-policy update, resolves repository access, then
-authorizes BF-002: discuss the proposed ADRs and close bootstrap choices.
-Application scaffolding is not yet authorized.
+Owner reviews/commits the architecture recommendations, then accepts ADR-001
+through ADR-003 and authorizes BF-003 bootstrap. No application scaffolding was
+performed in BF-002. BF-003 scope and checks are below.
 
-Suggested owner commit message: `chore: add local artifact ignore policy`.
+Suggested owner commit message: `docs: clarify architecture and bootstrap scope`.
+
+## BF-003 implementation contract
+
+Objective: reproducible minimal application and unit-test tooling, so later
+business work has a verified baseline. Owner: Engineering; estimate 2–3 active
+hours, to be replaced/supplemented by actual recorded time if tracked.
+
+Prerequisites: accepted ADR-001 through ADR-003, approved BF-003 scope, compatible
+runtime/package manager, preservation of existing documentation and local settings.
+
+In scope: pinned compatible dependencies, strict TypeScript, Next.js App Router
+under `src/app`, Tailwind, ESLint, Vitest, one public status page and documented
+setup/check commands. Include one rendering smoke test of the initial page using
+the installed React DOM server renderer, proving the Vitest/import baseline.
+Do not add browser-simulation dependencies or a domain abstraction for that test;
+behavioural scheduling tests begin in BF-004.
+
+Out of scope: database/Drizzle/Supabase setup or dependencies, authentication,
+scheduling/domain modules, dashboards, component kits, CI, deployment and remote
+changes. Do not scaffold empty future modules.
+
+Definition of done: clean frozen-lockfile install, lint, standalone TypeScript
+check, one-shot unit tests and production build all pass. Run the app, inspect
+the public page in a browser and record the outcome; a build is not browser
+verification. Preserve documents/settings, inspect all new public files and
+report missing checks explicitly. Document exact commands that actually ran.
+
+Failure policy: fix failures within scope; stop for missing credentials, required
+external mutations or a real product decision. Do not silently skip a required
+check. End after updating this roadmap and reviewing the complete diff.

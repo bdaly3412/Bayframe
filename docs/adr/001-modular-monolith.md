@@ -51,6 +51,18 @@ team boundary justifies extraction. Portfolio appearance alone does not.
 
 ## Acceptance discussion
 
-Confirm that a separately deployed API has no current required consumer and that
-the owner accepts Next.js as both interface host and server application runtime.
-No implementation or production guarantee is established by this proposal.
+Reviewed in BF-002 on 20 October 2026. Recommended for owner acceptance:
+
+- One Next.js App Router application on the Node.js runtime; no Edge runtime or
+  separately deployed API. No required independent API consumer is identified.
+- Feature services own business operations; framework entry points validate and
+  authorize, then call those services. Persistence joins the service transaction.
+- Bootstrap uses a supported Node.js 24 LTS patch, pnpm, strict TypeScript, a
+  `src/app` directory, `@/*` imports, Tailwind CSS, ESLint and Vitest. Resolve and
+  pin compatible exact versions during BF-003; do not install future features.
+- First route is a restrained public project-status page with synthetic content.
+  No dashboard, auth, database client or empty feature-service scaffolding in
+  BF-003. Add modules when their first behaviour requires them.
+
+This is an architectural recommendation, not owner acceptance or runtime
+verification. No production guarantee follows from this review.

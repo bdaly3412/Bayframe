@@ -62,9 +62,34 @@ solely for architectural variety.
 
 ## Acceptance discussion
 
-Confirm local Auth infrastructure, runtime/migration roles, Data API exposure,
-trusted membership storage, first protected operation and revocation expectations.
-No remote auth service or account changes are authorized by this proposal.
+Reviewed in BF-002 on 20 October 2026. Recommended for owner acceptance:
+
+- Supabase Auth provides staff identity; trusted application staff records hold
+  role, active flag and workshop membership. Check membership on each protected
+  operation; do not authorize using editable user metadata or role claims alone.
+- Put business tables in an `app` schema outside the Data API's exposed schemas.
+  Give `anon`/`authenticated` no business-schema grants. Verify both exposure and
+  effective grants rather than assuming a custom schema is inherently private.
+- Use a dedicated server runtime role, not the schema owner or a superuser, with
+  no `BYPASSRLS`, no DDL and only required business DML. Use separate migration
+  privileges. Application query scoping enforces workshop access; no user-JWT RLS
+  context is assumed for Drizzle. Document any additional private-schema RLS
+  before enabling it; an exposed data path requires tested RLS policies.
+- First persisted entities are workshop, staff and bay/technician resources.
+  Resolve exact staff/auth reference and deletion constraints in BF-006 against
+  the actual local auth schema, preserving operational history.
+- BF-007 delivers one protected resource read. Verify anonymous, non-staff,
+  inactive and wrong-workshop denial as well as success. Protected mutations
+  later add their own role checks. Do not treat login as the authorization test.
+- Start with standard verified server-side sessions and explicitly deny inactive
+  staff. Immediate invalidation of an otherwise valid identity token is not
+  claimed; define stricter revocation requirements before sensitive deployment.
+
+Customer approval links remain a later separate capability flow. No remote auth
+service, email delivery or account changes are authorized. This is a reviewed
+proposal; only owner acceptance changes the ADR status.
 
 References: [Supabase server-side auth](https://supabase.com/docs/guides/auth/server-side/creating-a-client),
 [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).
+
+Schema reference: [Supabase schema exposure and grants](https://supabase.com/docs/guides/api/using-custom-schemas).
