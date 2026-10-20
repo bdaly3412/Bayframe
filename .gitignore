@@ -1,0 +1,30 @@
+# Dependencies and generated builds
+node_modules/
+/.next/
+/out/
+/dist/
+/build/
+*.tsbuildinfo
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+!.env.*.example
+/.auth/
+/playwright/.auth/
+/.vercel/
+
+# Test results and local artifacts
+/coverage/
+/test-results/
+/playwright-report/
+/blob-report/
+/output/
+/.cache/
+/.tmp/
+*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db

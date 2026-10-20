@@ -4,7 +4,8 @@ Updated: 20 October 2026.
 
 ## Current state
 
-Documentation foundation created. Application implementation has not started.
+Documentation foundation committed locally as `abf957f`. Application
+implementation has not started. Remote publication is not verified.
 Technical ADRs are proposed and require owner review. Repository history changes
 remain owner-controlled.
 
@@ -38,7 +39,7 @@ deliverable.
 
 | ID / state | Objective and reason | Dependencies | Estimated effort / owner | Acceptance and verification |
 | --- | --- | --- | --- | --- |
-| BF-001 / Review | Project documentation; preserve scope and operating rules | Initial scope agreement | Estimate not recorded / Engineering, owner review | Documentation links and required sections checked; diff reviewed; owner accepts documentation |
+| BF-001 / Done | Project documentation; preserve scope and operating rules | Initial scope agreement | Estimate not recorded / Engineering, owner review | Owner committed the reviewed foundation as `abf957f`; documentation checks passed |
 | BF-002 / Ready | Review three ADRs and resolve bootstrap assumptions; avoid competing architectures | BF-001 review | 1–2h / Owner review | ADR statuses explicitly decided; migration owner, DB access, runtime and first schema scope agreed |
 | BF-003 / Backlog | Bootstrap Next.js, strict TypeScript, pnpm and Vitest; reproducible engineering baseline | BF-002 and phase approval | 2–3h / Engineering | Clean install, development route, lint, typecheck, unit test and build actually succeed; versions/commands documented |
 | BF-004 / Backlog | Interval semantics; establish back-to-back scheduling behaviour | BF-003 | 1–2h / Engineering | Overlap, containment, adjacency, symmetry and invalid-interval unit tests pass |
@@ -70,19 +71,21 @@ accepted; do not silently remove the required end-to-end workflow.
 
 - 20 October: the 12 public documentation files passed checks for 19 local
   links/anchors, proposed ADR structure, encoding and formatting. The tracked
-  diff passed `git diff --check`; no changes are staged. Owner review remains open.
+  diff passed `git diff --check`; the owner subsequently committed the foundation.
 - 19 October: Docker CLI/Compose were available, but the Linux engine was
   unreachable. Recheck before database setup; do not assume it remains stopped.
 - No garage-operator validation, runtime tests, migration tests, browser tests,
   remote CI or deployment evidence exists yet.
-- Application code and tests were not added. BF-001 remains Review until the
-  owner accepts the documents. No commit or push was performed.
+- The owner committed the documentation foundation as `abf957f` on 20 October.
+  A subsequent push failed with an access error; remote publication remains
+  blocked pending authorized repository access. Application code/tests are absent.
+- Shared ignore rules cover dependencies, generated builds, local credentials,
+  test results and artifacts. Local setup does not change application readiness.
 
 ## Next action
 
-Owner reviews the documentation, then authorizes BF-002: discuss the proposed
-ADRs and close bootstrap choices. Application scaffolding is not yet authorized.
+Owner commits the ignore-policy update, resolves repository access, then
+authorizes BF-002: discuss the proposed ADRs and close bootstrap choices.
+Application scaffolding is not yet authorized.
 
-Suggested owner commit message: `docs: establish Bayframe project foundation`.
-An initial repository commit already exists; this would be the documentation
-foundation commit, not the repository's first commit.
+Suggested owner commit message: `chore: add local artifact ignore policy`.
