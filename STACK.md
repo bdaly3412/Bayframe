@@ -1,8 +1,8 @@
 # Technology stack
 
 Status: foundation pinned and ADR-001 through ADR-003 accepted, 20 October 2026.
-Later-stage tools remain uninstalled. This file owns tool selection; ADRs own
-the reasons for major choices.
+Later-stage tools remain uninstalled except the BF-005 database baseline below.
+This file owns tool selection; ADRs own the reasons for major choices.
 
 | Area | Choice / selection status | Introduction point |
 | --- | --- | --- |
@@ -10,15 +10,15 @@ the reasons for major choices.
 | Language | Strict TypeScript 5.9.3 | BF-003 |
 | Application | React / React DOM 19.3.1, Next.js App Router 16.4.2 | BF-003; local public status page |
 | Styling | Tailwind CSS / PostCSS plugin 4.3.3, PostCSS 8.5.31 | BF-003; application-owned markup |
-| Database | PostgreSQL | Foundation; record actual major/minor version |
-| Persistence | Drizzle ORM and versioned SQL migrations | First schema; custom SQL where necessary |
+| Database | PostgreSQL 17.11; btree_gist 1.7 | BF-005; local Supabase image 17.11.0.004 |
+| Persistence | Drizzle ORM 0.45.4, Kit 0.31.11, pg / @types/pg 8.23.1 | BF-005; versioned custom SQL baseline |
 | Authentication | Supabase Auth | First staff access path; ADR-003 |
 | Boundary validation | Zod | First external-input boundary |
-| Unit/integration tests | Vitest 5.0.5, Vite 7.3.7; real PostgreSQL later | BF-003 rendering smoke test; domain tests begin BF-004 |
+| Unit/integration tests | Vitest 5.0.5, Vite 7.3.7; real PostgreSQL assert checks | BF-003 rendering test; BF-004 intervals; BF-005 migration/privilege checks |
 | Linting | ESLint 9.39.4, eslint-config-next 16.4.2 | BF-003; Core Web Vitals and TypeScript rules |
 | Browser tests | Playwright | First end-to-end workflow |
 | CI | GitHub Actions | Once local checks are reproducible |
-| Local infrastructure | Docker and local Supabase | Foundation; engine readiness required |
+| Local infrastructure | Docker Linux engine and project-local Supabase CLI 2.121.0 | BF-005; dedicated project/ports; requested loopback binding ineffective on this host |
 | Logging | Structured server logs | First server workflow |
 | Error monitoring | Sentry if justified | Release review; no provisioning authorized |
 | Deployment | Vercel and managed PostgreSQL under consideration | Separate deployment decision and approval |

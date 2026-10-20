@@ -1,16 +1,17 @@
 # Architecture
 
-Status: proposed; no application implemented. Updated: 20 October 2026.
+Status: ADR-001 through ADR-003 accepted; application and local database
+foundations implemented. Updated: 20 October 2026.
 
 ## Shape
 
 One Next.js application with feature-oriented server modules and PostgreSQL.
 Reasons and alternatives are in [ADR-001](adr/001-modular-monolith.md).
 
-BF-002 reviewed the following baseline for owner acceptance: Node.js runtime,
+BF-002 established the accepted baseline: Node.js runtime,
 Drizzle with `pg`, local Supabase as one application/auth database, business
 tables in non-exposed `app`, and separate runtime/migration privileges. The three
-ADRs remain proposed; this review introduces no application code.
+ADRs are accepted. BF-005 setup and privilege evidence are in [database.md](database.md).
 
 ```mermaid
 flowchart TD
@@ -68,7 +69,7 @@ database transaction. Notifications are not part of initial implementation.
 
 ## Authentication and database access
 
-Proposed: Supabase Auth verifies staff identity; active application staff membership
+Accepted design: Supabase Auth verifies staff identity; active application staff membership
 determines permissions; server-side Drizzle performs scoped business access in
 an `app` schema outside the Data API's exposed schemas. Deny business-schema
 access to API roles; use a non-owner server role with only required DML and a
@@ -79,9 +80,9 @@ creation. See [security.md](security.md) and [ADR-003](adr/003-authentication.md
 
 ## Migration and deployment boundaries
 
-Proposed: Drizzle owns application migration history, including reviewed SQL for
+Accepted design: Drizzle owns application migration history, including reviewed SQL for
 extensions and constraints. Supabase manages local platform/auth infrastructure.
-This is the BF-002 recommendation awaiting owner acceptance. Never create competing migration histories for
+BF-005 verifies the initial schema, extension and privilege baseline. Never create competing migration histories for
 the same tables or alter platform-owned auth tables casually.
 
 Choose the connection driver/pool mode against transaction requirements and the

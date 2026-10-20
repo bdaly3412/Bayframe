@@ -4,18 +4,19 @@ Updated: 20 October 2026.
 
 ## Current state
 
-The checkout started clean on `main` at `c123d29` on 20 October 2026. The owner
-reviewed and committed BF-003, accepted ADR-001 through ADR-003 and authorized
-BF-004 only. BF-004 implementation and local verification are complete and ready
-for owner review: a framework-independent interval module, unit tests and
-[documented semantics](docs/intervals.md). BF-004 changes remain unstaged and
-uncommitted. No remote state was changed or rechecked. Repository history changes
-remain owner-controlled. BF-005 has not started and requires separate approval.
+The checkout started clean on `main` at `1de07b6` on 20 October 2026. The owner
+reviewed and committed BF-004, accepted ADR-001 through ADR-003 and authorized
+BF-005 only. BF-005 implementation and local checks are complete in Review:
+project-local Supabase/PostgreSQL, separate migration/runtime logins, Drizzle's
+schema/extension baseline and disposable real-database verification. See
+[database setup](docs/database.md) and executed evidence below. Changes remain
+unstaged and uncommitted. No remote state was changed or rechecked. Repository
+history changes remain owner-controlled. BF-006 has not started or been authorized.
 
 The initial planning window is 20 October–16 November 2026, with a provisional
 72–100 focused-hour budget. Re-estimate after the first working database and
 authentication slice; do not claim tracked time retroactively.
-Actual active time has not been recorded for BF-002 through BF-004.
+Actual active time has not been recorded for BF-002 through BF-005.
 
 ## Milestones
 
@@ -45,8 +46,8 @@ deliverable.
 | BF-001 / Done | Project documentation; preserve scope and operating rules | Initial scope agreement | Estimate not recorded / Engineering, owner review | Owner committed the reviewed foundation as `abf957f`; documentation checks passed |
 | BF-002 / Done | Review three ADRs and resolve bootstrap assumptions; avoid competing architectures | BF-001 complete | 1–2h estimated; actual not recorded / Owner review | Owner accepted ADR-001 through ADR-003 on 20 October 2026; no database/auth implementation implied |
 | BF-003 / Done | Bootstrap Next.js, strict TypeScript, pnpm and Vitest; reproducible engineering baseline | Accepted BF-002; owner authorized BF-003 | 2–3h estimated; actual not recorded / Engineering, owner review | Owner reviewed and committed as `c123d29`; prior install/browser evidence below; pinned runtime, lint, standalone typecheck, tests and production build reverified in BF-004 |
-| BF-004 / Review | Interval semantics; establish back-to-back scheduling behaviour | Owner reviewed/committed BF-003 and authorized BF-004 | 1–2h estimated; actual not recorded / Engineering, owner review | 24 interval tests plus existing rendering test pass; lint, standalone typecheck and production build pass; owner review/manual commit outstanding |
-| BF-005 / Backlog | Local database and migration baseline; reproduce persistence | BF-002, Docker engine available | 3–4h / Engineering | Migrations apply to empty disposable DB; DB version/extension availability recorded; no remote DB changed |
+| BF-004 / Done | Interval semantics; establish back-to-back scheduling behaviour | Owner reviewed/committed BF-003 and authorized BF-004 | 1–2h estimated; actual not recorded / Engineering, owner review | Owner reviewed and committed as `1de07b6`; 25 tests and required checks pass |
+| BF-005 / Review | Local database and migration baseline; reproduce persistence | BF-004 committed, accepted ADRs, Docker Linux engine available | 3–4h estimated; actual not recorded / Engineering, owner review | Empty real PostgreSQL migrations and unchanged second run pass; PostgreSQL 17.11 / btree_gist 1.7; privilege checks, lint/typecheck/25 tests/build pass; manual review/commit pending |
 | BF-006 / Backlog | Workshop, staff and resources; enforce ownership | BF-005 | 3–4h / Engineering | Positive fixtures and invalid relationship/uniqueness tests run on real PostgreSQL |
 | BF-007 / Backlog | Staff login and protected resource read; prove access boundary | BF-003, BF-006 | 3–4h / Engineering | Valid staff succeeds; anonymous, inactive/non-staff and wrong-role cases fail; no privileged data path exposed |
 | BF-008 / Backlog | Document setup and prepare initial CI; reproduce local checks | BF-004 through BF-007 | 2–3h / Engineering | Local checks pass; workflow prepared; remote CI verified only after owner pushes |
@@ -77,8 +78,9 @@ accepted; do not silently remove the required end-to-end workflow.
   diff passed `git diff --check`; the owner subsequently committed the foundation.
 - 19 October: Docker CLI/Compose were available, but the Linux engine was
   unreachable. Recheck before database setup; do not assume it remains stopped.
-- No garage-operator validation, database runtime/migration tests, automated
-  end-to-end suite, remote CI or deployment evidence exists yet.
+- No garage-operator validation, business-table/transaction/concurrency checks,
+  automated end-to-end suite, remote CI or deployment evidence exists yet.
+  BF-005 database infrastructure evidence is recorded below.
 - The owner committed the documentation foundation as `abf957f` on 20 October.
   The later ignore-policy commit is `3d6ebba`; read-only remote verification found
   the same SHA on `refs/heads/main`. The prior access blocker is resolved for that
@@ -119,13 +121,82 @@ accepted; do not silently remove the required end-to-end workflow.
 
 ## Next action
 
-Owner reviews BF-004 and manually stages/commits only `README.md`, `ROADMAP.md`,
-`docs/intervals.md`, `src/scheduling/interval.ts` and
-`src/scheduling/interval.test.ts`. Then separately authorize BF-005 local database
-and migration baseline in a fresh task, after verifying Docker engine readiness.
-No database/auth implementation is included in BF-004.
+Owner reviews BF-005 and manually stages/commits its explicit public paths:
+`README.md`, `ROADMAP.md`, `STACK.md`, `docs/architecture.md`, `docs/database.md`,
+`package.json`, `pnpm-lock.yaml`, `tsconfig.json`, `drizzle.config.ts`,
+`drizzle/0000_baseline.sql`, both `drizzle/meta/` JSON files, `scripts/db/schema.ts`,
+the four `scripts/db/*.mts` files and `supabase/config.toml`.
+Then separately authorize BF-006 workshop/staff/resource persistence in a fresh
+task. Before restarting local services, inspect network exposure as documented;
+loopback-only publication was not established on this Docker Desktop host.
+No business tables or authentication flow are included in BF-005.
 
-Suggested owner commit message: `feat: define half-open interval semantics`.
+Suggested owner commit message: `feat: establish local database migration baseline`.
+
+## BF-005 implementation and evidence
+
+Objective: reproduce local persistence before business tables. Owner: Engineering;
+estimate 3–4 active hours, actual not recorded. Prerequisites verified before
+implementation: owner-approved BF-004 committed at `1de07b6`, clean checkout,
+accepted ADR-001 through ADR-003, Docker Linux engine, pnpm 11.25.0 and script
+runtime Node.js v24.13.0. Existing lint, standalone typecheck, 25 one-shot tests
+and production build passed before dependency changes.
+
+Implemented: local project `bayframe-local` on dedicated ports 55421/55422;
+Supabase owns platform/auth objects, with application migrations/seeds disabled.
+Drizzle/pg owns `app`, the migration journal, `btree_gist` and application ACLs.
+The API exposes `public,graphql_public`; `app` is absent from exposure/search
+paths and API roles have no schema privileges. Runtime has CONNECT/USAGE only;
+no business DML is granted. Migration/runtime roles have no elevated role flags
+or memberships; runtime cannot perform schema/table/temp DDL, assume the migration
+role, read its journal or read `auth.users`. No application runtime client or
+connection pool is added before a real query requires it.
+
+Pinned new dependencies: Drizzle ORM 0.45.4, Kit 0.31.11, pg and @types/pg 8.23.1,
+Supabase CLI 2.121.0. Current official documentation, CLI help, registry metadata
+and installed stable APIs were checked. `pnpm install --frozen-lockfile` passed
+after installation. Required build scripts remain limited to existing allowed
+esbuild/resolver entries; the CLI uses its packaged platform binary.
+
+Executed `pnpm db:setup`, `pnpm db:migrate` and `pnpm db:verify` on real PostgreSQL.
+Setup reran successfully without rotating passwords or overwriting `.env.local`.
+The database image is `public.ecr.aws/supabase/postgres:17.11.0.004`;
+`SHOW server_version` returned **17.11**. `btree_gist` **1.7** was installed by
+the migration in `app`. The verifier created a unique disposable database from
+`template0`, checked that app/journal/auth schemas were absent, applied one
+migration, compared its hash with the journal and reran migrations: zero pending,
+unchanged journal. It verified ownership/API denial, real runtime login and
+privilege failures, plus rolled-back default table/function ACL probes. Its
+connections closed and its own disposable database was removed without force.
+No pre-existing database or volume was reset/deleted, and the pre-existing
+separate Supabase stack was preserved.
+
+A bounded source review found a missing `app` entry in the initial Drizzle
+snapshot. Correcting it prevents a duplicate CREATE SCHEMA on the next migration.
+`pnpm exec drizzle-kit check` passes; `pnpm db:generate` reports no schema changes.
+Final `pnpm lint`, standalone `pnpm typecheck`, `pnpm test` (25/25 in two files)
+and `pnpm build` pass. Database scripts use native Node TypeScript support and
+are included in lint/typecheck. The build still prerenders only the existing
+status page, not a database-dependent route.
+
+Public source/config/docs, migration SQL/journal/snapshot and dependency changes
+were reviewed. Formatting/local-link/publication checks and `git diff --check`
+passed. Staging remains empty. Excluded configuration, including `next.config.ts`,
+was preserved; its SHA256 matches the starting value. Supabase scratch state is
+locally excluded, and the generated tool-specific ignore file was removed.
+Random credentials stay ignored and were never printed. No Git history or
+remote operations occurred.
+
+Limitations: Docker engine 29.9.1 still published ports on all interfaces despite
+the documented loopback network option. LAN isolation was not proven; no global
+firewall/daemon settings were changed. Bayframe services were stopped at closeout
+with volumes preserved. Inspect exposure before restarting on a controlled local
+machine/network. The setup is local-only and contains no production credential,
+transport, pooling, backup/recovery or release-packaging guarantee. There are no
+workshop/staff/resource tables, booking/allocation SQL, scheduling constraints,
+auth flows, availability services, UI changes, CI or deployment. No second-machine
+installation/browser check was repeated. BF-006 requires separate authorization
+and must verify the actual auth reference/deletion rules against the local schema.
 
 ## BF-004 implementation and evidence
 
@@ -156,8 +227,8 @@ Complete changed/new public-file review, formatting/encoding and local-link
 checks passed. `git diff --check` passed and the staging area remained empty.
 Local excluded configuration was preserved. No dependencies or UI were changed;
 no database/auth, SQL, booking/availability services, CI, deployment or remote
-operations were introduced. Definition of done for implementation/checks is met;
-owner review and manual commit remain outstanding.
+operations were introduced. The owner subsequently reviewed and committed
+BF-004 as `1de07b6`; its prior review/commit boundary is complete.
 
 Limitations: these tests prove in-memory interval semantics only. They do not
 prove PostgreSQL precision/mapping, constraints, transactions, permissions or
