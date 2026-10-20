@@ -34,6 +34,7 @@ successfully confirms the booking.
 | [Data model](docs/data-model.md) | Relationships, invariants and migration requirements |
 | [Security](docs/security.md) | Identity, permissions, customer links and data protection |
 | [Testing strategy](docs/testing-strategy.md) | Required correctness, concurrency and browser evidence |
+| [Interval semantics](docs/intervals.md) | Absolute instants, half-open boundaries and runtime validation |
 | [Design system](docs/design-system.md) | Interface principles and accessibility requirements |
 | [ADR-001](docs/adr/001-modular-monolith.md) | Accepted modular monolith |
 | [ADR-002](docs/adr/002-postgresql-scheduling.md) | Accepted PostgreSQL scheduling design |

@@ -4,17 +4,18 @@ Updated: 20 October 2026.
 
 ## Current state
 
-The checkout started clean on `main` at `66373eb` on 20 October 2026. The owner
-accepted ADR-001 through ADR-003 and authorized BF-003 only. BF-002 is complete.
-BF-003 implementation and local verification are complete and ready for owner
-review: one public status page, pinned tooling and a rendering smoke test.
-Changes remain unstaged and uncommitted. No remote state was changed or rechecked
-in BF-003. Repository history changes remain owner-controlled.
+The checkout started clean on `main` at `c123d29` on 20 October 2026. The owner
+reviewed and committed BF-003, accepted ADR-001 through ADR-003 and authorized
+BF-004 only. BF-004 implementation and local verification are complete and ready
+for owner review: a framework-independent interval module, unit tests and
+[documented semantics](docs/intervals.md). BF-004 changes remain unstaged and
+uncommitted. No remote state was changed or rechecked. Repository history changes
+remain owner-controlled. BF-005 has not started and requires separate approval.
 
 The initial planning window is 20 October–16 November 2026, with a provisional
 72–100 focused-hour budget. Re-estimate after the first working database and
 authentication slice; do not claim tracked time retroactively.
-Actual active time has not been recorded for BF-002 or BF-003.
+Actual active time has not been recorded for BF-002 through BF-004.
 
 ## Milestones
 
@@ -43,8 +44,8 @@ deliverable.
 | --- | --- | --- | --- | --- |
 | BF-001 / Done | Project documentation; preserve scope and operating rules | Initial scope agreement | Estimate not recorded / Engineering, owner review | Owner committed the reviewed foundation as `abf957f`; documentation checks passed |
 | BF-002 / Done | Review three ADRs and resolve bootstrap assumptions; avoid competing architectures | BF-001 complete | 1–2h estimated; actual not recorded / Owner review | Owner accepted ADR-001 through ADR-003 on 20 October 2026; no database/auth implementation implied |
-| BF-003 / Review | Bootstrap Next.js, strict TypeScript, pnpm and Vitest; reproducible engineering baseline | Accepted BF-002; owner authorized BF-003 | 2–3h estimated; actual not recorded / Engineering, owner review | Clean frozen install, development route, lint, standalone typecheck, 1 rendering test, production build and desktop/mobile browser checks passed; manual commit outstanding |
-| BF-004 / Ready | Interval semantics; establish back-to-back scheduling behaviour | Owner reviews BF-003 and separately authorizes BF-004 | 1–2h / Engineering | Overlap, containment, adjacency, symmetry and invalid-interval unit tests pass |
+| BF-003 / Done | Bootstrap Next.js, strict TypeScript, pnpm and Vitest; reproducible engineering baseline | Accepted BF-002; owner authorized BF-003 | 2–3h estimated; actual not recorded / Engineering, owner review | Owner reviewed and committed as `c123d29`; prior install/browser evidence below; pinned runtime, lint, standalone typecheck, tests and production build reverified in BF-004 |
+| BF-004 / Review | Interval semantics; establish back-to-back scheduling behaviour | Owner reviewed/committed BF-003 and authorized BF-004 | 1–2h estimated; actual not recorded / Engineering, owner review | 24 interval tests plus existing rendering test pass; lint, standalone typecheck and production build pass; owner review/manual commit outstanding |
 | BF-005 / Backlog | Local database and migration baseline; reproduce persistence | BF-002, Docker engine available | 3–4h / Engineering | Migrations apply to empty disposable DB; DB version/extension availability recorded; no remote DB changed |
 | BF-006 / Backlog | Workshop, staff and resources; enforce ownership | BF-005 | 3–4h / Engineering | Positive fixtures and invalid relationship/uniqueness tests run on real PostgreSQL |
 | BF-007 / Backlog | Staff login and protected resource read; prove access boundary | BF-003, BF-006 | 3–4h / Engineering | Valid staff succeeds; anonymous, inactive/non-staff and wrong-role cases fail; no privileged data path exposed |
@@ -118,11 +119,51 @@ accepted; do not silently remove the required end-to-end workflow.
 
 ## Next action
 
-Owner reviews the BF-003 diff and stages/commits only the explicit public files.
-Then authorize BF-004 interval semantics in a fresh task. BF-004 is ready but has
-not been started or authorized. Database/auth work remains in later stages.
+Owner reviews BF-004 and manually stages/commits only `README.md`, `ROADMAP.md`,
+`docs/intervals.md`, `src/scheduling/interval.ts` and
+`src/scheduling/interval.test.ts`. Then separately authorize BF-005 local database
+and migration baseline in a fresh task, after verifying Docker engine readiness.
+No database/auth implementation is included in BF-004.
 
-Suggested owner commit message: `feat: bootstrap application foundation`.
+Suggested owner commit message: `feat: define half-open interval semantics`.
+
+## BF-004 implementation and evidence
+
+Objective: establish finite, non-empty half-open interval semantics before
+persistence, following accepted ADR-002. Owner: Engineering; estimate 1–2 active
+hours, actual not recorded. Prerequisites verified: BF-003 owner approval,
+committed foundation `c123d29`, clean initial checkout, pnpm `11.25.0` and script
+runtime Node.js `v24.13.0`. Existing pinned dependencies/configuration are unchanged.
+
+In scope: `src/scheduling/interval.ts` exports readonly `Interval`, validated frozen
+construction and symmetric overlap. Endpoints are absolute Unix epoch milliseconds;
+finite negative/fractional numbers are allowed. Both public functions reject
+invalid endpoints with `RangeError`, including structural interval inputs to
+overlap. There are no imports or framework/database dependencies in the module.
+See [representation and validation](docs/intervals.md).
+
+Executed from the repository root on 20 October 2026: `pnpm lint`, `pnpm typecheck`,
+`pnpm test` and `pnpm build` all passed with exit code 0. The standalone typecheck
+ran before the build. Tests passed 25/25 across two files: 24 interval tests and
+the existing rendering smoke test. Cases cover partial overlap, strict containment,
+shared starts/ends, identical intervals, disjoint intervals, adjacency in both
+orders and symmetry; empty/reversed, NaN/infinite and non-numeric endpoints fail
+at construction and in either overlap argument. Negative/fractional endpoints and
+frozen construction are also checked. Production output still prerenders `/`,
+`/_not-found` and `/icon.svg`.
+
+Complete changed/new public-file review, formatting/encoding and local-link
+checks passed. `git diff --check` passed and the staging area remained empty.
+Local excluded configuration was preserved. No dependencies or UI were changed;
+no database/auth, SQL, booking/availability services, CI, deployment or remote
+operations were introduced. Definition of done for implementation/checks is met;
+owner review and manual commit remain outstanding.
+
+Limitations: these tests prove in-memory interval semantics only. They do not
+prove PostgreSQL precision/mapping, constraints, transactions, permissions or
+concurrency. Local-time ambiguity and overrun policies remain BF-009 requirements.
+No fresh install or browser review was repeated because dependencies and UI are
+unchanged. No release-package verification or production-readiness claim is made.
 
 ## BF-003 implementation contract
 
