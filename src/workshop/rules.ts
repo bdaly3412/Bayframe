@@ -21,6 +21,18 @@ export function displayTime(value: Date | string, timezone = "Europe/London") {
   return new Intl.DateTimeFormat("en-GB", { timeZone: timezone, dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
+export function workCapabilities(state: string, estimateState: string | undefined, completedTasks: boolean[]) {
+  const approvalAccepted = estimateState === "accepted";
+  const approvedWork = state === "in-progress" && approvalAccepted;
+  const planning = ["ready", "in-progress"].includes(state) || (state === "awaiting-approval" && estimateState === "draft");
+  return {
+    approvalAccepted,
+    canAddTask: planning && (!estimateState || ["draft", "rejected", "expired"].includes(estimateState)),
+    canMarkTaskComplete: approvedWork && completedTasks.some((done) => !done),
+    canComplete: approvedWork && completedTasks.length > 0 && completedTasks.every(Boolean),
+  };
+}
+
 export function localDay(value: Date, timezone: string) {
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(value);
   const field = (type: string) => parts.find((p) => p.type === type)!.value;

@@ -4,7 +4,7 @@ import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../db/index.ts";
 import { resources, staff, workshops } from "../../scripts/db/schema.ts";
 import { absences, allocations, auditEvents, bookings, customers, decisions, estimateLines, estimates, tasks, vehicles, workOrders } from "../../scripts/db/workflow-schema.ts";
-import { ensure, linesInput, requestInput, totals, uuid, WorkflowError } from "./rules.ts";
+import { ensure, linesInput, requestInput, totals, uuid, workCapabilities, WorkflowError } from "./rules.ts";
 
 export type Actor = { id: string; workshopId: string; authUserId: string; role: string };
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -19,8 +19,8 @@ async function withActor<T>(actor: Actor, roles: string[], run: (tx: Transaction
 }
 const operators = ["manager", "adviser"];
 const allStaff = [...operators, "technician"];
-async function audit(tx: Transaction, workshopId: string, actorId: string | null, reference: { bookingId?: string; workOrderId?: string; estimateId?: string; resourceId?: string }, action: string) {
-  await tx.insert(auditEvents).values({ workshopId, actorId, ...reference, action });
+async function audit(tx: Transaction, workshopId: string, actorId: string | null, reference: { bookingId?: string; workOrderId?: string; estimateId?: string; resourceId?: string }, action: string, details: Record<string, string> = {}) {
+  await tx.insert(auditEvents).values({ workshopId, actorId, ...reference, action, details });
 }
 async function lockBooking(tx: Transaction, actor: Actor, id: string) {
   const [booking] = await tx.select().from(bookings).where(and(eq(bookings.id, uuid.parse(id)), eq(bookings.workshopId, actor.workshopId))).for("update");
@@ -127,35 +127,36 @@ export async function addTask(actor: Actor, workId: string, description: string)
   ensure(description.trim().length > 0 && description.trim().length <= 500, "Task description must contain 1–500 characters.");
   return withActor(actor, operators, async (tx) => {
     const work = await lockWork(tx, actor, workId);
-    ensure(["ready", "in-progress"].includes(work.state), "Tasks can only be added before approval or completion.");
     const [estimate] = await tx.select().from(estimates).where(eq(estimates.workOrderId, work.id)).orderBy(sql`${estimates.version} DESC`).limit(1);
-    ensure(!estimate || ["draft", "rejected", "expired"].includes(estimate.state), "Issue a new scope only after the current estimate is resolved.");
-    await tx.insert(tasks).values({ workshopId: actor.workshopId, workOrderId: work.id, description: description.trim() });
-    await audit(tx, actor.workshopId, actor.id, { workOrderId: work.id }, "task-added");
+    ensure(workCapabilities(work.state, estimate?.state, []).canAddTask, "Tasks require an editable scope before completion. Prepare a new draft to revise issued work.");
+    const [task] = await tx.insert(tasks).values({ workshopId: actor.workshopId, workOrderId: work.id, description: description.trim() }).returning({ id: tasks.id });
+    await audit(tx, actor.workshopId, actor.id, { workOrderId: work.id }, "task-added", { taskId: task.id });
   });
 }
 
 export async function updateWork(actor: Actor, id: string, operation: "start" | "complete" | "close" | "task", taskId?: string) {
   return withActor(actor, operation === "close" ? operators : allStaff, async (tx) => {
     const work = await lockWork(tx, actor, id);
+    let completedTaskId: string | undefined;
     if (operation === "task") {
       ensure(work.state === "in-progress", "Work must be in progress.");
       const [approved] = await tx.select().from(estimates).where(eq(estimates.workOrderId, work.id)).orderBy(sql`${estimates.version} DESC`).limit(1);
-      ensure(approved?.state === "accepted", "Customer approval is required before completing tasks.");
+      ensure(workCapabilities(work.state, approved?.state, []).approvalAccepted, "Customer approval is required before completing tasks.");
       const changed = await tx.update(tasks).set({ done: true }).where(and(eq(tasks.id, uuid.parse(taskId)), eq(tasks.workOrderId, work.id), eq(tasks.done, false))).returning();
       ensure(changed.length === 1, "Task is missing or already complete.");
+      completedTaskId = changed[0].id;
     } else {
       const next = { start: "in-progress", complete: "completed", close: "closed" } as const;
       ensure(work.state === ({ start: "ready", complete: "in-progress", close: "completed" } as const)[operation], "Work-order transition is not permitted.");
       if (operation === "complete") {
         const workTasks = await tx.select().from(tasks).where(eq(tasks.workOrderId, work.id));
         const [latest] = await tx.select().from(estimates).where(eq(estimates.workOrderId, work.id)).orderBy(sql`${estimates.version} DESC`).limit(1);
-        ensure(workTasks.length && workTasks.every((t) => t.done) && latest?.state === "accepted", "All tasks and the latest customer approval are required.");
+        ensure(workCapabilities(work.state, latest?.state, workTasks.map((t) => t.done)).canComplete, "All tasks and the latest customer approval are required.");
       }
       await tx.update(workOrders).set({ state: next[operation] }).where(eq(workOrders.id, work.id));
       if (operation === "close") await tx.update(allocations).set({ releasedAt: new Date() }).where(and(eq(allocations.bookingId, work.bookingId), isNull(allocations.releasedAt)));
     }
-    await audit(tx, actor.workshopId, actor.id, { workOrderId: work.id }, operation === "task" ? "task-completed" : operation);
+    await audit(tx, actor.workshopId, actor.id, { workOrderId: work.id }, operation === "task" ? "task-completed" : operation, completedTaskId ? { taskId: completedTaskId } : {});
   });
 }
 
@@ -246,18 +247,23 @@ export async function workspace(actor: Actor) {
     const workRows = await tx.select().from(workOrders).where(and(eq(workOrders.workshopId, actor.workshopId), actor.role === "technician" ? eq(workOrders.technicianId, actor.id) : undefined));
     const workIds = workRows.map((w) => w.id);
     const taskRows = workIds.length ? await tx.select().from(tasks).where(inArray(tasks.workOrderId, workIds)) : [];
+    const scopeStates = workIds.length ? await tx.select({ workOrderId: estimates.workOrderId, state: estimates.state }).from(estimates).where(inArray(estimates.workOrderId, workIds)).orderBy(sql`${estimates.version} DESC`) : [];
+    const workWithCapabilities = workRows.map((work) => {
+      const capabilities = workCapabilities(work.state, scopeStates.find((e) => e.workOrderId === work.id)?.state, taskRows.filter((t) => t.workOrderId === work.id).map((t) => t.done));
+      return { ...work, ...capabilities, canAddTask: actor.role !== "technician" && capabilities.canAddTask };
+    });
     if (actor.role === "technician") {
       const assignedSchedule = await tx.select({ bookingId: bookings.id, startAt: bookings.startAt, endAt: bookings.endAt, state: bookings.state }).from(allocations)
         .innerJoin(resources, eq(resources.id, allocations.resourceId)).innerJoin(bookings, eq(bookings.id, allocations.bookingId))
         .where(and(eq(allocations.workshopId, actor.workshopId), eq(resources.staffId, actor.id), eq(allocations.kind, "technician"), isNull(allocations.releasedAt))).orderBy(bookings.startAt);
-      return { workshop, assignedSchedule, resources: [], bookings: [], allocations: [], workOrders: workRows, tasks: taskRows, estimates: [], lines: [], audit: [], absences: [] };
+      return { workshop, assignedSchedule, resources: [], bookings: [], allocations: [], workOrders: workWithCapabilities, tasks: taskRows, estimates: [], lines: [], audit: [], absences: [] };
     }
     const bookingRows = await tx.select({ id: bookings.id, state: bookings.state, startAt: bookings.startAt, endAt: bookings.endAt, name: customers.name, email: customers.email, registration: vehicles.registration })
       .from(bookings).innerJoin(customers, eq(customers.id, bookings.customerId)).innerJoin(vehicles, eq(vehicles.id, bookings.vehicleId)).where(eq(bookings.workshopId, actor.workshopId)).orderBy(bookings.startAt);
     const estimateRows = await tx.select({ id: estimates.id, workOrderId: estimates.workOrderId, version: estimates.version, state: estimates.state, net: estimates.net, tax: estimates.tax, total: estimates.total }).from(estimates).where(eq(estimates.workshopId, actor.workshopId)).orderBy(estimates.version);
     const lineRows = await tx.select().from(estimateLines).where(eq(estimateLines.workshopId, actor.workshopId));
     const reservationRows = await tx.select({ id: allocations.id, resourceId: allocations.resourceId, bookingId: allocations.bookingId, startAt: allocations.startAt, endAt: allocations.endAt }).from(allocations).where(and(eq(allocations.workshopId, actor.workshopId), isNull(allocations.releasedAt)));
-    const auditRows = actor.role === "manager" ? await tx.select({ id: auditEvents.id, action: auditEvents.action, createdAt: auditEvents.createdAt, actorId: auditEvents.actorId }).from(auditEvents).where(eq(auditEvents.workshopId, actor.workshopId)).orderBy(sql`${auditEvents.createdAt} DESC`).limit(100) : [];
-    return { workshop, assignedSchedule: [], resources: resourceRows, bookings: bookingRows, allocations: reservationRows, workOrders: workRows, tasks: taskRows, estimates: estimateRows, lines: lineRows, audit: auditRows, absences: await tx.select().from(absences).where(eq(absences.workshopId, actor.workshopId)) };
+    const auditRows = actor.role === "manager" ? await tx.select({ id: auditEvents.id, action: auditEvents.action, createdAt: auditEvents.createdAt, actorId: auditEvents.actorId, bookingId: auditEvents.bookingId, workOrderId: auditEvents.workOrderId, estimateId: auditEvents.estimateId, resourceId: auditEvents.resourceId, details: auditEvents.details }).from(auditEvents).where(eq(auditEvents.workshopId, actor.workshopId)).orderBy(sql`${auditEvents.createdAt} DESC`).limit(100) : [];
+    return { workshop, assignedSchedule: [], resources: resourceRows, bookings: bookingRows, allocations: reservationRows, workOrders: workWithCapabilities, tasks: taskRows, estimates: estimateRows, lines: lineRows, audit: auditRows, absences: await tx.select().from(absences).where(eq(absences.workshopId, actor.workshopId)) };
   });
 }

@@ -13,6 +13,8 @@ appointment requests, transactional bay/technician allocation, work orders,
 immutable estimate versions and restricted customer decisions are implemented.
 ADR-001 through ADR-003 remain accepted. Local unit, database and browser evidence
 is recorded in the roadmap; prepared CI has not been run remotely.
+Prototype acceptance also covers rejection/revision paths, safe work controls,
+task-level history and revised customer links in the same tab.
 Local PostgreSQL and migrations are documented in [database setup](docs/database.md).
 No production-readiness or performance claims are made.
 

@@ -6,25 +6,40 @@ import { money } from "@/workshop/rules";
 type PreviewResult = Awaited<ReturnType<typeof readDecision>>;
 export function Decision() {
   const token = useRef("");
-  const initialized = useRef(false);
-  const [result, setResult] = useState<PreviewResult>(), [message, setMessage] = useState(""), [pending, setPending] = useState(false);
+  const [loaded, setLoaded] = useState<{ token: string; result: PreviewResult }>(), [message, setMessage] = useState(""), [pending, setPending] = useState(false);
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-    const value = window.location.hash.slice(1); token.current = value;
-    history.replaceState(null, "", window.location.pathname);
-    readDecision(value).then(setResult).catch(() => setResult({ error: "The estimate could not be loaded. Reopen your link and try again." }));
+    let active = true;
+    function load() {
+      const value = window.location.hash.slice(1) || token.current;
+      token.current = value;
+      history.replaceState(null, "", window.location.pathname);
+      readDecision(value).then((result) => {
+        if (active && token.current === value) { setLoaded({ token: value, result }); setMessage(""); }
+      }).catch(() => {
+        if (active && token.current === value) setLoaded({ token: value, result: { error: "The estimate could not be loaded. Reopen your link and try again." } });
+      });
+    }
+    load();
+    window.addEventListener("hashchange", load);
+    return () => { active = false; window.removeEventListener("hashchange", load); };
   }, []);
   async function decide(decision: "accepted" | "rejected") {
-    if (pending) return;
+    if (!loaded || pending) return;
+    const selected = loaded;
     if (!window.confirm(decision === "accepted" ? "Accept this exact estimate and authorize the listed work?" : "Reject this estimate?")) return;
     setPending(true);
     try {
-      const response = await submitDecision(token.current, decision); setMessage(response.message);
-      if (response.success) setResult(await readDecision(token.current));
-    } catch { setMessage("Connection failed. Reopen the link to check whether your decision was recorded before trying again."); }
+      const response = await submitDecision(selected.token, decision);
+      if (token.current !== selected.token) return;
+      setMessage(response.message);
+      if (response.success) {
+        const result = await readDecision(selected.token);
+        if (token.current === selected.token) setLoaded({ token: selected.token, result });
+      }
+    } catch { if (token.current === selected.token) setMessage("Connection failed. Reopen the link to check whether your decision was recorded before trying again."); }
     finally { setPending(false); }
   }
+  const result = loaded?.result;
   if (!result) return <p role="status">Loading estimate…</p>;
   if (result.error) return <p role="alert" className="error">{result.error}</p>;
   const estimate = result.preview!;

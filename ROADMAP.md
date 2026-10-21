@@ -4,19 +4,19 @@ Updated: 21 October 2026.
 
 ## Current state
 
-Work continued on `main` at `0ef3e78`, preserving uncommitted BF-006 work. On
-21 October the owner authorized the remaining local demonstration and accepted
-the policies in [workflow.md](docs/workflow.md). ADR-001 through ADR-003 remain
-accepted. Staff access, requests, booking/resource transactions, work orders,
-versioned estimates and customer decisions are implemented, with a resource
-timeline and detailed table. Local evidence is below. BF-006 through BF-011 are
-in Review pending owner review; changes remain unstaged and uncommitted. No
-remote state was changed. Publication and deployment remain owner operations.
+The owner committed the local demonstration on `main` as `bc34cce`. On 21 October
+they requested a prototype completion check. BF-012 closes approval/revision
+controls, task-level audit traceability and same-tab customer link handling.
+Its changes remain unstaged for review. All 12 MVP requirements now have local
+implementation and runtime evidence, including the resource timeline and table.
+ADR-001 through ADR-003 remain accepted. The application is running at
+[localhost](http://127.0.0.1:3000) for local review. No repository history or remote
+state was changed during BF-012. Publication and deployment remain owner operations.
 
 The initial planning window is 20 October–16 November 2026, with a provisional
 72–100 focused-hour budget. Re-estimate after the first working database and
 authentication slice; do not claim tracked time retroactively.
-Actual active time has not been recorded for BF-002 through BF-006.
+Actual active time has not been recorded for BF-002 through BF-012.
 
 ## Milestones
 
@@ -48,12 +48,13 @@ deliverable.
 | BF-003 / Done | Bootstrap Next.js, strict TypeScript, pnpm and Vitest; reproducible engineering baseline | Accepted BF-002; owner authorized BF-003 | 2–3h estimated; actual not recorded / Engineering, owner review | Owner reviewed and committed as `c123d29`; prior install/browser evidence below; pinned runtime, lint, standalone typecheck, tests and production build reverified in BF-004 |
 | BF-004 / Done | Interval semantics; establish back-to-back scheduling behaviour | Owner reviewed/committed BF-003 and authorized BF-004 | 1–2h estimated; actual not recorded / Engineering, owner review | Owner reviewed and committed as `1de07b6`; 25 tests and required checks pass |
 | BF-005 / Done | Local database and migration baseline; reproduce persistence | BF-004 committed, accepted ADRs, Docker Linux engine available | 3–4h estimated; actual not recorded / Engineering, owner review | Owner reviewed and committed as `0ef3e78`; real PostgreSQL migration/privilege baseline and required checks passed |
-| BF-006 / Review | Workshop, staff and resources; enforce ownership | Owner-reviewed/committed BF-005; accepted ADRs; Docker Linux engine | 3–4h estimated; actual not recorded / Engineering, owner review | Three migrations and unchanged second run; positive synthetic fixtures and 26 rejection cases on real PostgreSQL; privilege/auth ownership checks, lint/typecheck/25 unit tests/build pass; manual review/commit pending |
+| BF-006 / Review | Workshop, staff and resources; enforce ownership | Owner-reviewed/committed BF-005; accepted ADRs; Docker Linux engine | 3–4h estimated; actual not recorded / Engineering, owner review | Foundation persistence/26 rejection cases passed; implementation included in owner commit `bc34cce`; current prototype acceptance evidence below |
 | BF-007 / Review | Staff login and protected resource read; prove access boundary | BF-003, BF-006 | Prior estimate 3–4h; actual not recorded / Engineering | 11 actual Auth/PostgreSQL cases pass: scoped success, signup denial, anonymous/inactive/nonstaff/wrong-role/wrong-workshop denial and logout |
 | BF-008 / Review | Document setup and prepare initial CI; reproduce local checks | BF-004 through BF-007 | Prior estimate 2–3h; actual not recorded / Engineering | Local setup/checks pass; SHA-pinned workflow prepared; remote CI unverified |
 | BF-009 / Review | Booking engine and failure tests; prove primary invariant | M1; accepted demo scope | Actual not recorded / Engineering | SQL exclusion/pair constraints, real lock waits, state races, rollback and 100-attempt contention pass |
 | BF-010 / Review | Work orders, estimates and decisions; complete operational workflow | BF-009; accepted demo scope | Actual not recorded / Engineering | Assigned work, immutable snapshots, version/expiry/replay guards and complete local journey pass |
 | BF-011 / Review | Demonstration and release review; present reproducible evidence | BF-010; accepted timeline addition | Actual not recorded / Engineering | Browser journey, resource timeline and responsive review; local release boundary documented; no deployment or remote CI claim |
+| BF-012 / Review | Complete prototype acceptance and launch local preview | Committed baseline `bc34cce`; owner continuation | Actual not recorded / Engineering | 56 unit tests, 10 PostgreSQL cases, 11 live auth cases, two expanded browser journeys, lint/typecheck/build and migration verification pass; revised scope/task audit/same-tab link regressions covered |
 
 BF-003 through BF-008 total roughly 14–21 hours before contingency and ADR work.
 These are planning estimates, not measured execution times or guarantees.
@@ -77,9 +78,9 @@ retains the complete workflow and includes both a resource timeline and table.
   diff passed `git diff --check`; the owner subsequently committed the foundation.
 - 19 October: Docker CLI/Compose were available, but the Linux engine was
   unreachable. Recheck before database setup; do not assume it remains stopped.
-- No garage-operator validation, booking/allocation/concurrency checks, automated
-  end-to-end suite, remote CI or deployment evidence exists yet. BF-005 database
-  infrastructure and BF-006 persistence evidence are recorded below.
+- At the initial documentation baseline, there was no booking/concurrency or
+  browser-suite evidence. BF-009 through BF-012 now provide that local evidence
+  below; garage-operator validation, remote CI and deployment remain unverified.
 - The owner committed the documentation foundation as `abf957f` on 20 October.
   The later ignore-policy commit is `3d6ebba`; read-only remote verification found
   the same SHA on `refs/heads/main`. The prior access blocker is resolved for that
@@ -120,15 +121,60 @@ retains the complete workflow and includes both a resource timeline and table.
 
 ## Next action
 
-Owner reviews the complete local demonstration, then manually stages only the
-public paths, inspects the staged diff and commits. No repository history or
-remote operation was executed during implementation. Suggested commit message:
-`feat: implement workshop booking and approval workflow`.
+Owner tries the running prototype and reviews the BF-012 changes, then manually
+stages the public paths, inspects the staged diff and commits. The earlier
+demonstration is already committed as `bc34cce`; it does not need staging again.
+Suggested commit message: `fix: complete prototype approval and audit workflow`.
 
 Run instructions, synthetic login location and stop conditions are in
-[workflow.md](docs/workflow.md). The local services are stopped with volumes
-preserved. Inspect exposure before restarting. Remote CI must be verified after
+[workflow.md](docs/workflow.md). Local services are running for review with data
+preserved; stop them after use. Inspect exposure before restarting. Remote CI must be verified after
 an owner-controlled push; deployment still requires its own explicit decision.
+
+## BF-012 prototype acceptance and current evidence
+
+The source was audited against all MVP rows in [product requirements](docs/product-requirements.md),
+using the accepted scope in [workflow.md](docs/workflow.md). Regression tests
+reproduced four defects before correction: pending replacement drafts refused
+planning tasks; UI controls offered completion without current approval; manager
+history hid record/task references; revised decision links opened in the same tab
+left the previous estimate displayed. No dependency, architecture or schema change
+was required. The shared work policy now governs mutations and safe UI flags;
+technicians receive no estimate/customer/audit records. New task events include
+their task ID in existing details; previous events are not rewritten. Preview and
+decision tokens remain paired, with fragment changes and stale responses handled.
+
+| MVP requirement | Current completion evidence |
+| --- | --- |
+| Request | Validated real transaction, no allocation; browser preserves invalid input |
+| Availability | Direct assertions before/after request, allocation, absence, adjacency and cancellation |
+| Confirm | Atomic bay/technician pair, booking state and audit; integration/browser |
+| Conflict | SQL exclusion, real lock wait, races and 100 competing confirmations |
+| Cancel | Atomic release, retained history and browser cancellation |
+| Reschedule | Successful replacement/adjacency, injected rollback and races |
+| Start | Unique check-in and explicit Start before approval; completion remains unavailable |
+| Progress | Assignment/current approval checks, permitted-action matrix and pending draft task planning |
+| Estimate | Integer arithmetic/rounding, versioning and immutable issued SQL snapshots |
+| Customer decision | Rejection → revision → acceptance, version/expiry/replay checks and revised same-tab link |
+| Complete/close | Approved completed tasks required; handover and release transaction verified |
+| History | Manager record/task references, actor/time; integration attribution and browser focus links |
+
+After corrections, lint, standalone typecheck, 56 unit tests in seven files,
+10 real-PostgreSQL integration cases, 11 actual Auth/runtime cases, production
+build and two expanded Chrome browser journeys pass. The eight-migration verifier
+also passes, including unchanged second application, platform ownership,
+26 foundation rejection cases and privilege/API checks. All disposable databases
+were removed. The latest 100-attempt diagnostic produced one confirmation,
+99 controlled conflicts and two active allocations with pool max five; it remains
+correctness evidence rather than a throughput benchmark.
+
+The browser journey explicitly starts work, rejects the first estimate, revises
+a pending scope, adds its task, opens the replacement link in the same tab,
+accepts, completes both tasks as assigned technician and records handover. History
+links focus the actual task. Desktop/mobile screenshots are in local
+`output/playwright/`; both viewports have no document overflow. The standalone
+server is bound to 127.0.0.1:3000 for review. Existing production/network/physical
+occupancy limitations still apply. No commit, push, remote CI or deployment ran.
 
 ## BF-007 through BF-011 implementation and evidence
 

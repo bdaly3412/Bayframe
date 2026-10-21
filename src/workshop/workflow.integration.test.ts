@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { admin, connect } from "../../scripts/db/local.mts";
 import { pool } from "../db/index.ts";
-import { addTask, allocate, cancelBooking, checkIn, createEstimate, createRequest, decideEstimate, issueEstimate, previewDecision, recordAbsence, updateWork, workspace, type Actor } from "./service.ts";
+import { addTask, allocate, availability, cancelBooking, checkIn, createEstimate, createRequest, decideEstimate, issueEstimate, previewDecision, recordAbsence, updateWork, workspace, type Actor } from "./service.ts";
 import { WorkflowError } from "./rules.ts";
 
 const workshopId = process.env.BAYFRAME_WORKSHOP_ID!;
@@ -37,6 +37,118 @@ afterAll(async () => {
 });
 
 describe("workflow against local PostgreSQL", () => {
+  it("projects permitted work actions through start, rejection, revision and current approval", async () => {
+    const bookingId = await request(10, 21);
+    await allocate(manager, { bookingId, bayId, technicianId: technicianResourceId });
+    const workId = await checkIn(manager, bookingId);
+    const projectedWork = async (actor = manager) => (await workspace(actor)).workOrders.find((work) => work.id === workId);
+    const unapproved = { approvalAccepted: false, canAddTask: true, canMarkTaskComplete: false, canComplete: false };
+    expect(await projectedWork()).toMatchObject({ state: "ready", ...unapproved });
+    await addTask(manager, workId, "Initial diagnostic task");
+    const taskId = (await raw.query("SELECT id FROM app.tasks WHERE work_order_id=$1", [workId])).rows[0].id as string;
+    await updateWork(technician, workId, "start");
+    expect(await projectedWork()).toMatchObject({ state: "in-progress", ...unapproved });
+    await expect(updateWork(technician, workId, "task", taskId)).rejects.toThrow(WorkflowError);
+    await expect(updateWork(technician, workId, "complete")).rejects.toThrow(WorkflowError);
+
+    const first = await createEstimate(manager, workId, [{ description: "Initial service", quantity: 1, unitPrice: 100 }]);
+    const rejectedToken = await issueEstimate(manager, first);
+    expect(await decideEstimate(rejectedToken, "rejected")).toBe("recorded");
+    expect(await projectedWork()).toMatchObject({ state: "in-progress", ...unapproved });
+    await expect(updateWork(technician, workId, "task", taskId)).rejects.toThrow(WorkflowError);
+    await expect(updateWork(technician, workId, "complete")).rejects.toThrow(WorkflowError);
+
+    const revised = await createEstimate(adviser, workId, [{ description: "Revised service", quantity: 1, unitPrice: 200 }]);
+    expect(await projectedWork()).toMatchObject(unapproved);
+    await expect(decideEstimate(rejectedToken, "rejected")).rejects.toThrow(WorkflowError);
+    const acceptedToken = await issueEstimate(adviser, revised);
+    expect(await decideEstimate(acceptedToken, "accepted")).toBe("recorded");
+    const approved = { approvalAccepted: true, canAddTask: false, canMarkTaskComplete: true, canComplete: false };
+    expect(await projectedWork()).toMatchObject(approved);
+    await expect(addTask(manager, workId, "Unapproved extra work")).rejects.toThrow(WorkflowError);
+
+    const technicianView = await workspace(technician);
+    expect(technicianView.workOrders.find((work) => work.id === workId)).toMatchObject({ ...approved, canAddTask: false });
+    expect(technicianView.estimates).toEqual([]);
+    expect(technicianView.lines).toEqual([]);
+    expect(technicianView.bookings).toEqual([]);
+    expect(technicianView.resources).toEqual([]);
+    expect(technicianView.audit).toEqual([]);
+    await updateWork(technician, workId, "task", taskId);
+    expect(await projectedWork(technician)).toMatchObject({ approvalAccepted: true, canAddTask: false, canMarkTaskComplete: false, canComplete: true });
+
+    await createEstimate(manager, workId, [{ description: "Additional scope", quantity: 1, unitPrice: 300 }]);
+    expect(await projectedWork()).toMatchObject(unapproved);
+    expect(await projectedWork(technician)).toMatchObject({ ...unapproved, canAddTask: false });
+    await expect(updateWork(technician, workId, "complete")).rejects.toThrow(WorkflowError);
+    await addTask(manager, workId, "New draft planning task");
+  });
+
+  it("allows task planning when a new draft replaces a pending issued estimate", async () => {
+    const bookingId = await request(10, 23);
+    await allocate(manager, { bookingId, bayId, technicianId: technicianResourceId });
+    const workId = await checkIn(manager, bookingId);
+    await addTask(manager, workId, "Original pending scope");
+    const first = await createEstimate(manager, workId, [{ description: "Original scope", quantity: 1, unitPrice: 100 }]);
+    const oldToken = await issueEstimate(manager, first);
+    await createEstimate(manager, workId, [{ description: "Replacement scope", quantity: 1, unitPrice: 200 }]);
+    await expect(previewDecision(oldToken)).rejects.toThrow(WorkflowError);
+    await addTask(manager, workId, "Task required by replacement draft");
+    const view = await workspace(manager);
+    expect(view.workOrders.find((work) => work.id === workId)).toMatchObject({
+      state: "awaiting-approval", approvalAccepted: false, canAddTask: true, canMarkTaskComplete: false, canComplete: false,
+    });
+    const taskId = view.tasks.find((task) => task.workOrderId === workId)!.id;
+    await expect(updateWork(technician, workId, "task", taskId)).rejects.toThrow(WorkflowError);
+    await expect(updateWork(technician, workId, "complete")).rejects.toThrow(WorkflowError);
+  });
+
+  it("reports advisory capacity without reservations and reflects allocations, absences and release", async () => {
+    const startAt = slot(10, 22), endAt = slot(11, 22);
+    await expect(availability(workshopId, startAt.toISOString())).resolves.toEqual({ bays: 2, technicians: 2 });
+    const bookingId = await request(10, 22);
+    await expect(availability(workshopId, startAt.toISOString())).resolves.toEqual({ bays: 2, technicians: 2 });
+    expect((await raw.query("SELECT count(*)::int AS n FROM app.allocations WHERE booking_id=$1", [bookingId])).rows[0].n).toBe(0);
+    await allocate(manager, { bookingId, bayId, technicianId: technicianResourceId });
+    await expect(availability(workshopId, startAt.toISOString())).resolves.toEqual({ bays: 1, technicians: 1 });
+    await recordAbsence(manager, secondBayId, startAt, endAt);
+    await recordAbsence(manager, secondTechnicianResourceId, startAt, endAt);
+    await expect(availability(workshopId, startAt.toISOString())).resolves.toEqual({ bays: 0, technicians: 0 });
+    await expect(availability(workshopId, endAt.toISOString())).resolves.toEqual({ bays: 2, technicians: 2 });
+    await cancelBooking(manager, bookingId);
+    await expect(availability(workshopId, startAt.toISOString())).resolves.toEqual({ bays: 1, technicians: 1 });
+    await expect(availability(otherWorkshopId, startAt.toISOString())).rejects.toThrow(WorkflowError);
+  });
+
+  it("retains task attribution and record references in manager audit history", async () => {
+    const bookingId = await request(10, 24);
+    await allocate(manager, { bookingId, bayId, technicianId: technicianResourceId });
+    const workId = await checkIn(manager, bookingId);
+    await addTask(manager, workId, "Auditable task");
+    const taskId = (await raw.query("SELECT id FROM app.tasks WHERE work_order_id=$1", [workId])).rows[0].id as string;
+    const estimateId = await createEstimate(manager, workId, [{ description: "Auditable scope", quantity: 1, unitPrice: 100 }]);
+    const token = await issueEstimate(manager, estimateId);
+    await decideEstimate(token, "accepted");
+    await updateWork(technician, workId, "task", taskId);
+    const taskEvents = (await raw.query("SELECT action,actor_id,created_at,details FROM app.audit_events WHERE work_order_id=$1 AND action IN ('task-added','task-completed') ORDER BY action", [workId])).rows;
+    expect(taskEvents).toHaveLength(2);
+    expect(taskEvents).toEqual(expect.arrayContaining([
+      expect.objectContaining({ action: "task-added", actor_id: manager.id, created_at: expect.any(Date), details: { taskId } }),
+      expect.objectContaining({ action: "task-completed", actor_id: technician.id, created_at: expect.any(Date), details: { taskId } }),
+    ]));
+    await recordAbsence(manager, secondBayId, slot(12, 24), slot(13, 24));
+    const view = await workspace(manager);
+    expect(view.audit).toEqual(expect.arrayContaining([
+      expect.objectContaining({ bookingId, action: "confirmed" }),
+      expect.objectContaining({ workOrderId: workId, action: "task-completed", details: { taskId } }),
+      expect.objectContaining({ estimateId, action: "customer-accepted" }),
+      expect.objectContaining({ resourceId: secondBayId, action: "absence-recorded" }),
+    ]));
+    expect(Object.keys(view.audit[0])).toEqual(expect.arrayContaining(["bookingId", "workOrderId", "estimateId", "resourceId", "details"]));
+    expect((await workspace(adviser)).audit).toEqual([]);
+    expect((await workspace(technician)).audit).toEqual([]);
+  });
+
   it("accepts valid London DST offsets and rejects malformed, weekend, and out-of-hours requests", async () => {
     const id = await createRequest({ workshopId, name: "  Customer  ", email: "fixture@example.test", registration: " ab12 ", startAt: slot(9).toISOString() });
     expect(id).toMatch(/^[0-9a-f-]{36}$/i);

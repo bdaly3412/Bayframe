@@ -104,6 +104,18 @@ requires at least one task, all tasks done and that current approval. Closing
 records handover and releases remaining reservations. Rejected work requires
 a revised estimate before tasks can be completed.
 
+Staff can start a ready order for planning. Completion controls appear only when
+the current estimate is accepted and the relevant tasks remain to be done.
+To change a pending issued scope, prepare a replacement draft, add its planning
+tasks, then issue the new version. A rejected estimate can likewise be revised
+and resubmitted. Technicians see an approval-waiting message while completion is
+unavailable.
+
+Manager history links each event to its booking, work order, estimate or resource.
+New task-addition/completion events also link to the exact task with actor/time.
+Earlier events retain their originally recorded detail; missing historical task
+identifiers are not reconstructed.
+
 Estimate versions increase under the work-order lock. A new draft invalidates
 older links; issuing a new version supersedes unresolved issued versions. Currency
 is GBP, quantities are positive integers, prices are integer pence excluding VAT,
@@ -121,6 +133,9 @@ identical decision is idempotent; a conflicting decision, expired link or older
 version fails. One database decision row is allowed per estimate. Issuing and
 deciding serialize on the same work-order lock. Possession of a link grants the
 decision capability; independent recipient identity verification is not claimed.
+
+A revised link can be opened in the same customer tab. The preview updates to
+that version and decision submission stays bound to the displayed estimate.
 
 ## Checks and limits
 

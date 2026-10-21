@@ -1,7 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { absoluteTime, lineInput, linesInput, localDay, requestInput, timelinePosition, totals } from "./rules";
+import { absoluteTime, lineInput, linesInput, localDay, requestInput, timelinePosition, totals, workCapabilities } from "./rules";
 
 describe("workflow rules", () => {
+  it.each([
+    ["ready", undefined, [], true, false, false],
+    ["in-progress", undefined, [false], true, false, false],
+    ["awaiting-approval", "draft", [false], true, false, false],
+    ["awaiting-approval", "issued", [false], false, false, false],
+    ["in-progress", "rejected", [false], true, false, false],
+    ["in-progress", "accepted", [false], false, true, false],
+    ["in-progress", "accepted", [true], false, false, true],
+    ["in-progress", "accepted", [], false, false, false],
+    ["closed", "accepted", [true], false, false, false],
+  ] as [string, string | undefined, boolean[], boolean, boolean, boolean][])("exposes valid actions for %s / %s", (state, estimate, done, canAddTask, canMarkTaskComplete, canComplete) => {
+    expect(workCapabilities(state, estimate, done)).toEqual({ approvalAccepted: estimate === "accepted", canAddTask, canMarkTaskComplete, canComplete });
+  });
   it("positions workshop-local reservations across winter and summer offsets", () => {
     expect(timelinePosition(new Date("2031-04-07T08:00:00Z"), new Date("2031-04-07T09:00:00Z"), "2031-04-07", "Europe/London")).toEqual({ left: 0, width: 12.5 });
     expect(timelinePosition(new Date("2031-10-27T16:00:00Z"), new Date("2031-10-27T17:00:00Z"), "2031-10-27", "Europe/London")).toEqual({ left: 87.5, width: 12.5 });

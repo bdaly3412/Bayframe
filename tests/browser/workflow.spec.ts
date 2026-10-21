@@ -120,6 +120,11 @@ test("synthetic request, conflict handling, approved work and handover", async (
   await task.getByLabel("Task description").fill(description);
   await task.getByRole("button", { name: "Add task", exact: true }).click();
   await expect(work.locator(".task-list")).toContainText(description);
+  const taskAnchor = await work.locator(".task-list li").first().getAttribute("id");
+  await work.getByRole("button", { name: "Start work", exact: true }).click();
+  await expect(work.locator("header .status")).toHaveText("in-progress");
+  await expect(work.getByRole("button", { name: "Mark task complete", exact: true })).toHaveCount(0);
+  await expect(work.getByRole("button", { name: "Complete approved work", exact: true })).toHaveCount(0);
 
   await work.getByText("Prepare a new estimate version", { exact: true }).click();
   const draft = actionForm(work, "draft");
@@ -142,6 +147,38 @@ test("synthetic request, conflict handling, approved work and handover", async (
   await expect(customer.getByRole("heading", { name: "Estimate version 1", exact: true })).toBeVisible();
   await expect(customer.getByText(description, { exact: true })).toBeVisible();
   customer.once("dialog", (dialog) => dialog.accept());
+  await customer.getByRole("button", { name: "Reject estimate", exact: true }).click();
+  await expect(customer.locator(".status")).toHaveText("rejected");
+
+  async function prepareVersion(version: number) {
+    if (!await draft.isVisible()) await work.getByText("Prepare a new estimate version", { exact: true }).click();
+    await draft.getByLabel("Work / parts description").fill(`${description} version ${version}`);
+    await draft.getByLabel("Quantity", { exact: true }).fill("1");
+    await draft.getByLabel("Unit price (£, excluding VAT)").fill("90.00");
+    await draft.getByRole("button", { name: "Save draft version", exact: true }).click();
+    await expect(work.getByText(`Version ${version} · draft`, { exact: true })).toBeVisible();
+  }
+  async function issueCurrentVersion() {
+    await issue.getByRole("button", { name: "Issue exact version for customer decision", exact: true }).click();
+    await expect(linkField).toBeVisible();
+    return linkField.inputValue();
+  }
+  await page.reload();
+  await expect(work.locator("header .status")).toHaveText("in-progress");
+  await expect(work.getByRole("button", { name: "Mark task complete", exact: true })).toHaveCount(0);
+  await prepareVersion(2);
+  await issueCurrentVersion();
+  await page.reload();
+  await expect(work.locator("header .status")).toHaveText("awaiting-approval");
+  await prepareVersion(3);
+  await work.getByText("Add a task", { exact: true }).click();
+  await task.getByLabel("Task description").fill(`${description} revised scope`);
+  await task.getByRole("button", { name: "Add task", exact: true }).click();
+  await expect(work.locator(".task-list")).toContainText(`${description} revised scope`);
+  const revisedLink = await issueCurrentVersion();
+  await customer.goto(revisedLink);
+  await expect(customer.getByRole("heading", { name: "Estimate version 3", exact: true })).toBeVisible();
+  customer.once("dialog", (dialog) => dialog.accept());
   await customer.getByRole("button", { name: "Accept and authorize work", exact: true }).click();
   await expect(customer.locator(".status")).toHaveText("accepted");
   await customerContext.close();
@@ -154,8 +191,12 @@ test("synthetic request, conflict handling, approved work and handover", async (
   await expect(technician.getByText("browser.fixture@example.test", { exact: true })).toHaveCount(0);
   const assigned = technician.locator("article.work-order").filter({ hasText: `Booking ${reference.slice(0, 8)}` });
   await expect(assigned.locator("header .status")).toHaveText("in-progress");
-  await assigned.getByRole("button", { name: "Mark task complete", exact: true }).click();
+  await expect(assigned.getByRole("button", { name: "Complete approved work", exact: true })).toHaveCount(0);
+  await assigned.getByRole("button", { name: "Mark task complete", exact: true }).first().click();
   await expect(assigned.locator(".task-list")).toContainText(`Complete · ${description}`);
+  await expect(assigned.getByRole("button", { name: "Complete approved work", exact: true })).toHaveCount(0);
+  await assigned.getByRole("button", { name: "Mark task complete", exact: true }).click();
+  await expect(assigned.locator(".task-list")).toContainText(`Complete · ${description} revised scope`);
   await assigned.getByRole("button", { name: "Complete approved work", exact: true }).click();
   await expect(assigned.locator("header .status")).toHaveText("completed");
   await technicianContext.close();
@@ -167,6 +208,9 @@ test("synthetic request, conflict handling, approved work and handover", async (
   const audit = page.getByRole("table", { name: "Latest 100 business events" });
   await expect(audit.getByRole("cell", { name: "customer-accepted", exact: true }).first()).toBeVisible();
   await expect(audit.getByRole("cell", { name: "close", exact: true }).first()).toBeVisible();
+  if (!taskAnchor) throw new Error("Task reference is missing.");
+  await audit.getByRole("link", { name: `Task ${taskAnchor.slice(5,13)}`, exact: true }).first().click();
+  await expect(page.locator(`#${taskAnchor}`)).toBeFocused();
 
   mkdirSync("output/playwright", { recursive: true });
   await page.screenshot({ path: "output/playwright/schedule-desktop.png", fullPage: true });
