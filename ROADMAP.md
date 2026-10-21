@@ -4,19 +4,12 @@ Updated: 21 October 2026.
 
 ## Current state
 
-The owner committed the local demonstration on `main` as `bc34cce`. On 21 October
-they requested a prototype completion check. BF-012 closes approval/revision
-controls, task-level audit traceability and same-tab customer link handling.
-Its changes remain unstaged for review. All 12 MVP requirements now have local
-implementation and runtime evidence, including the resource timeline and table.
-ADR-001 through ADR-003 remain accepted. The application is running at
-[localhost](http://127.0.0.1:3000) for local review. No repository history or remote
-state was changed during BF-012. Publication and deployment remain owner operations.
+The owner committed prototype completion as `d621fe2` on `main`. BF-013 implements the approved full frontend redesign on that baseline. Schedule, job sheets, resources, absences, history, staff sign-in, requests and exact-version customer decisions now share one design system. The resource timeline and detailed table remain. All twelve MVP workflows retain local implementation and runtime evidence; ADR-001 through ADR-003 remain accepted. BF-013 changes are unstaged for owner review. No repository history, remote state or deployment was changed. See the BF-013 evidence below.
 
 The initial planning window is 20 October–16 November 2026, with a provisional
 72–100 focused-hour budget. Re-estimate after the first working database and
 authentication slice; do not claim tracked time retroactively.
-Actual active time has not been recorded for BF-002 through BF-012.
+Actual active time has not been recorded for BF-002 through BF-013.
 
 ## Milestones
 
@@ -54,7 +47,8 @@ deliverable.
 | BF-009 / Review | Booking engine and failure tests; prove primary invariant | M1; accepted demo scope | Actual not recorded / Engineering | SQL exclusion/pair constraints, real lock waits, state races, rollback and 100-attempt contention pass |
 | BF-010 / Review | Work orders, estimates and decisions; complete operational workflow | BF-009; accepted demo scope | Actual not recorded / Engineering | Assigned work, immutable snapshots, version/expiry/replay guards and complete local journey pass |
 | BF-011 / Review | Demonstration and release review; present reproducible evidence | BF-010; accepted timeline addition | Actual not recorded / Engineering | Browser journey, resource timeline and responsive review; local release boundary documented; no deployment or remote CI claim |
-| BF-012 / Review | Complete prototype acceptance and launch local preview | Committed baseline `bc34cce`; owner continuation | Actual not recorded / Engineering | 56 unit tests, 10 PostgreSQL cases, 11 live auth cases, two expanded browser journeys, lint/typecheck/build and migration verification pass; revised scope/task audit/same-tab link regressions covered |
+| BF-012 / Done | Complete prototype acceptance and launch local preview | Committed baseline `bc34cce`; owner continuation | Actual not recorded / Engineering | Owner committed as `d621fe2`; 56 unit tests, 10 PostgreSQL cases, 11 live auth cases, two browser journeys and required gates passed; revised scope/task audit/same-tab link regressions covered |
+| BF-013 / Review | Redesign the complete frontend around schedule and job sheets | Committed prototype `d621fe2`; approved redesign scope | Actual active time not recorded / Engineering, owner review | 60 unit, 10 PostgreSQL, 11 live auth and 18 browser tests; lint, standalone typecheck, build, migrations, responsive/error evidence and final correction review pass |
 
 BF-003 through BF-008 total roughly 14–21 hours before contingency and ADR work.
 These are planning estimates, not measured execution times or guarantees.
@@ -121,15 +115,75 @@ retains the complete workflow and includes both a resource timeline and table.
 
 ## Next action
 
-Owner tries the running prototype and reviews the BF-012 changes, then manually
-stages the public paths, inspects the staged diff and commits. The earlier
-demonstration is already committed as `bc34cce`; it does not need staging again.
-Suggested commit message: `fix: complete prototype approval and audit workflow`.
+Owner reviews the BF-013 frontend and public diff, then manually stages explicit public paths, inspects the staged diff and commits if accepted. The prototype fixes are already committed as `d621fe2`; they do not need staging again. Suggested commit message: `feat: redesign workshop operations and customer flows`.
 
 Run instructions, synthetic login location and stop conditions are in
 [workflow.md](docs/workflow.md). Local services are running for review with data
 preserved; stop them after use. Inspect exposure before restarting. Remote CI must be verified after
 an owner-controlled push; deployment still requires its own explicit decision.
+
+## BF-013 frontend redesign and evidence
+
+The approved redesign replaces the stacked prototype page with a schedule-first
+workspace and separate work-order, resource, absence and manager-history views.
+The paired resource timeline and detailed table remain. Booking rows show actual
+bay/technician assignments; job sheets group vehicle context, tasks, authorization
+and immutable estimate versions. Customer entry, sign-in, request and decision
+flows share the implemented [design system](docs/design-system.md).
+
+The database schema, transaction services, domain policies and permission
+projections are unchanged. Presentation consumes existing work capabilities.
+Named validation errors now connect to fields; failed sign-in retains email.
+Cross-view record links wait for streamed targets before focusing them. Issued
+links have an explicit copy-before-refresh action. Customer success feedback,
+short estimate tables, narrow navigation and 200% text clipping were corrected
+following browser evidence. The mobile job selector uses native controls.
+
+Executed on 21 October 2026:
+
+| Check | Verified result |
+| --- | --- |
+| Frozen lockfile installation | Passed; pinned package graph preserved |
+| ESLint and standalone TypeScript | Passed |
+| Unit suite | 60 passed in eight files |
+| Migration / ACL verifier | Eight hashes; second application unchanged; 26 foundation rejection cases and platform/runtime boundaries passed |
+| Real PostgreSQL integration | 10 passed; 100 attempts yielded one confirmation and 99 controlled conflicts, with the correct active pair |
+| Live authentication | 11 passed, including scoped permissions and denied access |
+| Production build | Passed for every application route |
+| Chrome browser suite | 18 passed; complete request → allocation → work → rejection/revision/approval → completion → handover plus permission/focus/recovery tests |
+| Responsive / text sizing | Ten surfaces at 320, 390, 768 and 1440px plus 200% root text size; no document overflow in checked cases |
+| Long persisted data | Contact 120 characters, registration 20, task 500; retained after reload and readable on narrow job sheets |
+| Keyboard | Skip link, visible focus, scrollable timeline, native mobile navigation and job selection, record/task fragment focus passed |
+| Failure recovery | Invalid absolute time and connection failure retain values and focus actionable errors; an isolated missing-database probe rendered the staff error/retry view without changing real data; normal view restored afterward |
+| Visual review | Seven material corrections scored resolved in a bounded confirmation review |
+
+Representative local evidence is in ignored `output/playwright/redesign/`:
+`schedule-allocated-*`, `work-selected-*`, `decision-issued-*`,
+`decision-accepted-*`, the ten-surface matrix, long-context and failure captures.
+Forty initial viewport samples recorded zero layout-shift sum; ten console
+summaries recorded zero errors. Intentional text-resize movement is recorded
+separately. These are local observations, not session-window CLS, field metrics,
+measured improvements or a performance guarantee. Expected console errors from
+the isolated missing-database probe are separate from the successful-view samples.
+
+The production app remains at http://127.0.0.1:3000 on loopback for owner review.
+The isolated failure-probe server was stopped. Existing synthetic database data
+and volumes are preserved; test journeys append synthetic history. The index is
+empty. Source, docs, dependencies and font licence are unstaged for manual review.
+The pre-existing Material UI/Emotion/shadcn package additions were retained;
+only the necessary streaming style integration dependencies were added.
+
+Limitations: browser evidence is desktop Chrome with viewport and text-size
+emulation, not physical devices, actual browser zoom, screen-reader validation,
+full accessibility conformance or real garage-operator validation. The existing
+Material UI version is a prerelease. Remote CI, deployment, production operations,
+rate limits, backups and physical-overrun policy remain outside this stage.
+Docker's previously observed all-interface database exposure remains unresolved;
+loopback application binding does not establish database LAN isolation.
+
+Next task: owner reviews the running synthetic application and explicit public
+diff, then stages/checks/commits only if accepted. No release or further product
+phase is authorized by this closeout.
 
 ## BF-012 prototype acceptance and current evidence
 

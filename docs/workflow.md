@@ -40,16 +40,15 @@ disabled. There is no invitation, recovery or email-delivery UI.
    a bay and linked technician, then confirm. A conflict leaves the request intact.
    Select its workshop day in **Resource timeline** to see both reservations.
    Timeline links focus the booking row; the table holds the detailed actions.
-3. Check in the confirmed booking. Add its work tasks and prepare an estimate.
+3. Check in the confirmed booking, then choose **Open work order**. The job sheet groups vehicle, tasks and estimate versions. Add its work tasks and prepare an estimate.
    The interface creates one line per estimate version; the service accepts up
    to 50 lines. Issuing freezes the snapshot and displays its decision link once.
 4. Copy that link for the synthetic booking contact. Open it in another browser
    session, review the exact version/amounts and explicitly accept or reject.
-5. Sign in as the assigned technician. Complete each approved task, then complete
+5. Sign in as the assigned technician and open **Work orders**. Complete each approved task, then complete
    the work order. The manager/adviser records handover and closes it.
 
-To view revised records after issuing a link, copy the link first, then reload
-the schedule. The raw capability is not stored and cannot be recovered; issue a
+To view revised records after issuing a link, copy the link first, then choose **Refresh after copying link** to update the records. The raw capability is not stored and cannot be recovered; issue a
 new version if the link is lost. No real customer messages are sent.
 
 ## Scheduling policy and integrity
@@ -69,7 +68,7 @@ new version if the link is lost. No real customer messages are sent.
 - Cancellation releases reservations and retains their history. Rescheduling
   replaces both allocations atomically; failure preserves the original booking.
   Check-in creates at most one work order and fixes its technician assignment.
-- Managers record resource absences. An absence overlapping a reservation is
+- Managers record resource absences in **Absences**. An absence overlapping a reservation is
   rejected; resolve the booking first. There is no absence-editing UI.
 - Overruns require staff intervention and rescheduling before check-in. Once
   checked in, the planned interval remains the reservation. This application
@@ -111,7 +110,7 @@ tasks, then issue the new version. A rejected estimate can likewise be revised
 and resubmitted. Technicians see an approval-waiting message while completion is
 unavailable.
 
-Manager history links each event to its booking, work order, estimate or resource.
+The manager-only **History** view links each event to its booking, work order, estimate or resource.
 New task-addition/completion events also link to the exact task with actor/time.
 Earlier events retain their originally recorded detail; missing historical task
 identifiers are not reconstructed.

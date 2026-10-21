@@ -15,6 +15,7 @@ ADR-001 through ADR-003 remain accepted. Local unit, database and browser eviden
 is recorded in the roadmap; prepared CI has not been run remotely.
 Prototype acceptance also covers rejection/revision paths, safe work controls,
 task-level history and revised customer links in the same tab.
+The frontend uses a shared allocation-sheet design with separate schedule, job-sheet, resource, absence and history destinations. Customer requests and decisions use the same typography and controls. See the [implemented design system](docs/design-system.md).
 Local PostgreSQL and migrations are documented in [database setup](docs/database.md).
 No production-readiness or performance claims are made.
 

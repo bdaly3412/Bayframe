@@ -9,6 +9,8 @@ This file owns tool selection; ADRs own the reasons for major choices.
 | Language | Strict TypeScript 5.9.3 | BF-003 |
 | Application | React / React DOM 19.3.1, Next.js App Router 16.4.2 | BF-003; local public status page |
 | Styling | Tailwind CSS / PostCSS plugin 4.3.3, PostCSS 8.5.31 | BF-003; application-owned markup |
+| Interface controls | Material UI 10.0.0-alpha.0, Emotion React 11.14.0 / styled 11.14.1 / cache 11.14.0 / server 11.11.0, Next integration 9.5.0 | BF-013; existing prerelease component version retained; local regression evidence does not establish release stability |
+| Typography | Self-hosted IBM Plex Sans 400/500/600 WOFF2, SIL OFL 1.1 | BF-013; licence and copyright retained in public/fonts |
 | Database | PostgreSQL 17.11; btree_gist 1.7 | BF-005; local Supabase image 17.11.0.004 |
 | Persistence | Drizzle ORM 0.45.4, Kit 0.31.11, pg / @types/pg 8.23.1 | BF-005; versioned custom SQL baseline |
 | Authentication | Supabase Auth, @supabase/ssr 0.12.7, @supabase/supabase-js 2.118.0, server-only 0.0.1 | BF-007; verified identity, refresh and scoped membership |
@@ -64,6 +66,8 @@ See [setup commands](README.md#setup-and-verification) and
 
 ## Official references
 
+- [Material UI App Router integration](https://mui.com/material-ui/integrations/nextjs/)
+- [IBM Plex](https://github.com/IBM/plex)
 - [Next.js](https://nextjs.org/docs)
 - [Next.js installation](https://nextjs.org/docs/app/getting-started/installation)
 - [Next.js ESLint compatibility](https://nextjs.org/docs/app/api-reference/config/eslint)

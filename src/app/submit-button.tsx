@@ -1,3 +1,4 @@
 "use client";
 import { useFormStatus } from "react-dom";
-export function SubmitButton({ children }: { children: string }) { const { pending } = useFormStatus(); return <button type="submit" disabled={pending}>{pending ? "Please wait…" : children}</button>; }
+import { Button } from "@/app/controls";
+export function SubmitButton({ children }: { children: string }) { const { pending } = useFormStatus(); return <Button type="submit" disabled={pending} aria-busy={pending}>{pending ? "Signing in…" : children}</Button>; }

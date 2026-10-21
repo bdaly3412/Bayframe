@@ -6,7 +6,7 @@ import { requireStaff, StaffAccessError } from "@/auth/access";
 import { absoluteTime, uuid, WorkflowError } from "@/workshop/rules";
 import { addTask, allocate, availability, cancelBooking, checkIn, createEstimate, createRequest, decideEstimate, issueEstimate, previewDecision, recordAbsence, updateWork } from "@/workshop/service";
 
-export type ActionResult = { success: boolean; message: string; link?: string };
+export type ActionResult = { success: boolean; message: string; link?: string; fields?: string[] };
 function safeMessage(error: unknown) {
   if (error instanceof z.ZodError) return error.issues.map((i) => `${i.path.join(".") || "Input"}: ${i.message}`).join("; ");
   if (error instanceof WorkflowError || error instanceof StaffAccessError) return error.message;
@@ -48,7 +48,10 @@ export async function runAction(data: FormData): Promise<ActionResult> {
     }
     if (!link) revalidatePath("/staff/schedule");
     return { success: true, message, ...(link ? { link } : {}) };
-  } catch (error) { return { success: false, message: safeMessage(error) }; }
+  } catch (error) {
+    const fields = error instanceof z.ZodError ? [...new Set(error.issues.flatMap((issue) => typeof issue.path[0] === "string" ? [issue.path[0]] : []))] : [];
+    return { success: false, message: safeMessage(error), ...(fields.length ? { fields } : {}) };
+  }
 }
 
 export async function readDecision(token: string) {

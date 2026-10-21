@@ -33,6 +33,12 @@
     "test:browser": "playwright test"
   },
   "dependencies": {
+    "@emotion/cache": "11.14.0",
+    "@emotion/react": "11.14.0",
+    "@emotion/server": "11.11.0",
+    "@emotion/styled": "11.14.1",
+    "@mui/material": "10.0.0-alpha.0",
+    "@mui/material-nextjs": "9.5.0",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.118.0",
     "drizzle-orm": "0.45.4",
@@ -54,6 +60,7 @@
     "eslint": "9.39.4",
     "eslint-config-next": "16.4.2",
     "postcss": "8.5.31",
+    "shadcn": "4.22.1",
     "supabase": "2.121.0",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",

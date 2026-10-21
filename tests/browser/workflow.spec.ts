@@ -4,6 +4,7 @@ import { test, expect, type Locator, type Page } from "@playwright/test";
 
 const workshopId = process.env.BAYFRAME_WORKSHOP_ID ?? "baf00000-0000-4000-8000-000000000001";
 const scheduleUrl = `/staff/schedule?workshop=${workshopId}`;
+test.use({ screenshot: "off" });
 
 async function signIn(page: Page, role: "manager" | "technician") {
   const accounts = JSON.parse(readFileSync("output/demo-credentials.txt", "utf8")) as Record<string, { email: string; password: string }>;
@@ -22,12 +23,35 @@ function futureSlot() {
   return date.toISOString();
 }
 
-async function submitRequest(page: Page, name: string, startAt: string) {
+async function captureWidths(page: Page, name: string) {
+  mkdirSync("output/playwright/redesign", { recursive: true });
+  for (const width of [1440, 768, 390, 320]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 });
+    await expect(page.getByText("Loading workshop records…", { exact: true })).toHaveCount(0);
+    if (name === "work-selected") await page.locator("article.work-order").scrollIntoViewIfNeeded();
+    await page.evaluate(() => document.fonts.ready);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    if (name.startsWith("decision-")) {
+      const table = page.getByRole("region", { name: "Estimate line items", exact: true });
+      const size = await table.evaluate((element) => ({ scroll: element.scrollWidth, frame: element.clientWidth }));
+      expect(size.scroll <= size.frame + 1, `${name} at ${width}px: table ${size.scroll}px / frame ${size.frame}px`).toBe(true);
+      for (const price of await table.locator("tbody td:last-child").all()) {
+        const box = await price.boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      }
+    }
+    await page.screenshot({ path: `output/playwright/redesign/${name}-${width}.png`, animations: "disabled" });
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+}
+
+async function submitRequest(page: Page, name: string, startAt: string, registration = `BF${randomBytes(4).toString("hex").toUpperCase()}`) {
   await page.goto("/request");
   const form = actionForm(page, "request");
   await form.getByLabel("Booking contact").fill(name);
   await form.getByLabel("Email", { exact: true }).fill("browser.fixture@example.test");
-  await form.getByLabel("Vehicle registration").fill(`BF${randomBytes(4).toString("hex").toUpperCase()}`);
+  await form.getByLabel("Vehicle registration").fill(registration);
   await form.getByLabel("Requested start (absolute time)").fill(startAt);
   await form.getByRole("button", { name: "Request appointment", exact: true }).click();
   await expect(form.getByRole("status")).toContainText("Request received. Reference");
@@ -68,12 +92,15 @@ test("synthetic request, conflict handling, approved work and handover", async (
   await request.getByLabel("Requested start (absolute time)").fill(slot.slice(0, 19));
   await request.getByRole("button", { name: "Request appointment", exact: true }).click();
   await expect(request.getByRole("alert")).toBeVisible();
+  await expect(request.getByRole("alert")).toHaveAttribute("data-outcome", "error");
   await expect(request.getByLabel("Booking contact")).toHaveValue(name);
   await expect(request.getByLabel("Email", { exact: true })).toHaveValue("browser.fixture@example.test");
   await expect(request.getByLabel("Requested start (absolute time)")).toHaveValue(slot.slice(0, 19));
   await request.getByLabel("Requested start (absolute time)").fill(slot);
   await request.getByRole("button", { name: "Request appointment", exact: true }).click();
   await expect(request.getByRole("status")).toContainText("Request received. Reference");
+  await expect(request.getByRole("status")).toHaveAttribute("data-outcome", "success");
+  await expect(request.getByRole("status")).toHaveCSS("color", "rgb(20, 92, 80)");
   const reference = (await request.getByRole("status").textContent())?.match(/Reference ([a-f0-9-]{36})\./)?.[1];
   if (!reference) throw new Error("The request acknowledgement did not contain a booking reference.");
   await submitRequest(page, conflictName, slot);
@@ -84,15 +111,27 @@ test("synthetic request, conflict handling, approved work and handover", async (
   await chooseResources(row);
   await expect(row.locator(".status")).toHaveText("confirmed");
   const timeline = page.getByRole("region", { name: "Scrollable resource timeline" });
-  const reservation = timeline.getByRole("link", { name: `Booking ${reference.slice(0,8)}`, exact: true });
+  const reservation = timeline.getByRole("link", { name: new RegExp(`Booking ${reference.slice(0,8)} ·`) });
   await expect(reservation).toHaveCount(2);
+  const labels = await reservation.evaluateAll((links) => links.map((link) => link.getAttribute("aria-label")));
+  for (const label of labels) {
+    expect(label).toContain(`BF${suffix.toUpperCase()} · Booking ${reference.slice(0,8)} ·`);
+    expect(label).toMatch(/: .+ – .+ \(Europe\/London\)$/);
+  }
+  expect(labels.some((label) => label?.includes("Bay 1:"))).toBe(true);
+  expect(labels.some((label) => label?.includes("Demo technician:"))).toBe(true);
+  await page.getByRole("combobox", { name: "Booking state", exact: true }).selectOption("requested");
+  await page.getByRole("button", { name: "Filter", exact: true }).click();
+  await expect(row).toHaveCount(0);
   await reservation.first().click();
   await expect(page.locator(`#booking-${reference}`)).toBeFocused();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await captureWidths(page, "schedule-allocated");
   mkdirSync("output/playwright", { recursive: true });
-  await page.screenshot({ path: "output/playwright/timeline-desktop.png", fullPage: true });
+  await page.screenshot({ path: "output/playwright/timeline-desktop.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.screenshot({ path: "output/playwright/timeline-mobile.png", fullPage: true });
+  await page.screenshot({ path: "output/playwright/timeline-mobile.png" });
   await page.setViewportSize({ width: 1440, height: 1000 });
 
   const scheduleTechContext = await browser.newContext({ baseURL: "http://127.0.0.1:3000" });
@@ -108,11 +147,13 @@ test("synthetic request, conflict handling, approved work and handover", async (
   const rejectedConfirmation = await chooseResources(conflict);
   await expect(rejectedConfirmation.getByRole("alert")).toContainText("unavailable");
   await expect(conflict.locator(".status")).toHaveText("requested");
+  page.once("dialog", (dialog) => dialog.accept());
   await actionForm(conflict, "cancel").getByRole("button", { name: "Cancel booking", exact: true }).click();
   await expect(conflict.locator(".status")).toHaveText("cancelled");
 
   await row.getByRole("button", { name: "Check in / create work order", exact: true }).click();
   await expect(row.locator(".status")).toHaveText("checked-in");
+  await row.getByRole("link", { name: "Open work order", exact: true }).click();
   const work = page.locator("article.work-order").filter({ hasText: `Booking ${reference.slice(0, 8)}` });
   await expect(work.locator("header .status")).toHaveText("ready");
   await work.getByText("Add a task", { exact: true }).click();
@@ -146,9 +187,11 @@ test("synthetic request, conflict handling, approved work and handover", async (
   await customer.goto(decisionLink);
   await expect(customer.getByRole("heading", { name: "Estimate version 1", exact: true })).toBeVisible();
   await expect(customer.getByText(description, { exact: true })).toBeVisible();
+  await captureWidths(customer, "decision-issued");
   customer.once("dialog", (dialog) => dialog.accept());
   await customer.getByRole("button", { name: "Reject estimate", exact: true }).click();
   await expect(customer.locator(".status")).toHaveText("rejected");
+  await captureWidths(customer, "decision-rejected");
 
   async function prepareVersion(version: number) {
     if (!await draft.isVisible()) await work.getByText("Prepare a new estimate version", { exact: true }).click();
@@ -163,7 +206,8 @@ test("synthetic request, conflict handling, approved work and handover", async (
     await expect(linkField).toBeVisible();
     return linkField.inputValue();
   }
-  await page.reload();
+  await issue.getByRole("button", { name: "Refresh after copying link", exact: true }).click();
+  await expect(linkField).toHaveCount(0);
   await expect(work.locator("header .status")).toHaveText("in-progress");
   await expect(work.getByRole("button", { name: "Mark task complete", exact: true })).toHaveCount(0);
   await prepareVersion(2);
@@ -181,6 +225,7 @@ test("synthetic request, conflict handling, approved work and handover", async (
   customer.once("dialog", (dialog) => dialog.accept());
   await customer.getByRole("button", { name: "Accept and authorize work", exact: true }).click();
   await expect(customer.locator(".status")).toHaveText("accepted");
+  await captureWidths(customer, "decision-accepted");
   await customerContext.close();
 
   const technicianContext = await browser.newContext({ baseURL: "http://127.0.0.1:3000" });
@@ -189,6 +234,8 @@ test("synthetic request, conflict handling, approved work and handover", async (
   await technician.goto(`http://127.0.0.1:3000${scheduleUrl}`);
   await expect(technician.getByRole("heading", { name: "Appointment requests and schedule", exact: true })).toHaveCount(0);
   await expect(technician.getByText("browser.fixture@example.test", { exact: true })).toHaveCount(0);
+  await technician.getByRole("navigation", { name: "Staff navigation", exact: true }).getByRole("link", { name: "Work orders", exact: true }).click();
+  await technician.getByRole("navigation", { name: "Work orders", exact: true }).getByRole("link").filter({ hasText: `Booking ${reference.slice(0, 8)}` }).click();
   const assigned = technician.locator("article.work-order").filter({ hasText: `Booking ${reference.slice(0, 8)}` });
   await expect(assigned.locator("header .status")).toHaveText("in-progress");
   await expect(assigned.getByRole("button", { name: "Complete approved work", exact: true })).toHaveCount(0);
@@ -203,18 +250,64 @@ test("synthetic request, conflict handling, approved work and handover", async (
 
   await page.reload();
   await expect(work.locator("header .status")).toHaveText("completed");
+  await captureWidths(page, "work-selected");
   await work.getByRole("button", { name: "Record handover and close", exact: true }).click();
   await expect(work.locator("header .status")).toHaveText("closed");
+  await page.getByRole("navigation", { name: "Staff navigation", exact: true }).getByRole("link", { name: "History", exact: true }).click();
   const audit = page.getByRole("table", { name: "Latest 100 business events" });
   await expect(audit.getByRole("cell", { name: "customer-accepted", exact: true }).first()).toBeVisible();
   await expect(audit.getByRole("cell", { name: "close", exact: true }).first()).toBeVisible();
   if (!taskAnchor) throw new Error("Task reference is missing.");
   await audit.getByRole("link", { name: `Task ${taskAnchor.slice(5,13)}`, exact: true }).first().click();
+  await expect(page).toHaveURL(/view=work/);
   await expect(page.locator(`#${taskAnchor}`)).toBeFocused();
 
   mkdirSync("output/playwright", { recursive: true });
-  await page.screenshot({ path: "output/playwright/schedule-desktop.png", fullPage: true });
+  await page.screenshot({ path: "output/playwright/schedule-desktop.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.screenshot({ path: "output/playwright/schedule-mobile.png", fullPage: true });
+  await page.screenshot({ path: "output/playwright/schedule-mobile.png" });
+});
+
+test("maximum-sized synthetic job context remains readable after storage", async ({ page }) => {
+  const name = `Synthetic ${"N".repeat(110)}`;
+  const registration = `BF${randomBytes(9).toString("hex").toUpperCase()}`;
+  const description = `Synthetic task ${"T".repeat(485)}`;
+  expect(name.length).toBe(120);
+  expect(registration.length).toBe(20);
+  expect(description.length).toBe(500);
+  const reference = await submitRequest(page, name, futureSlot(), registration);
+  await signIn(page, "manager");
+  await page.goto(scheduleUrl);
+  const row = page.locator(`#booking-${reference}`).locator("..");
+  await chooseResources(row);
+  await expect(row.locator(".status")).toHaveText("confirmed");
+  await row.getByRole("button", { name: "Check in / create work order", exact: true }).click();
+  await expect(row.locator(".status")).toHaveText("checked-in");
+  await row.getByRole("link", { name: "Open work order", exact: true }).click();
+  const work = page.locator("article.work-order");
+  await expect(work).toContainText(`Booking ${reference.slice(0,8)}`);
+  await expect(work).toContainText(name);
+  await expect(work).toContainText(registration);
+  await work.getByText("Add a task", { exact: true }).click();
+  const task = actionForm(work, "add-task");
+  await task.getByLabel("Task description").fill(description);
+  await task.getByRole("button", { name: "Add task", exact: true }).click();
+  await expect(work.locator(".task-list")).toContainText(description);
+  await page.reload();
+  await expect(work.locator(".task-list")).toContainText(description);
+  await expect(work).toContainText(name);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const picker = page.getByRole("combobox", { name: "Work order", exact: true });
+  const current = await picker.inputValue();
+  const other = await picker.locator("option").evaluateAll((options, selected) => options.map((option) => option.getAttribute("value")).find((value) => value && value !== selected), current);
+  expect(other).toBeTruthy();
+  await picker.selectOption(other!);
+  await page.getByRole("button", { name: "Open job", exact: true }).click();
+  await expect(work).toHaveAttribute("id", `work-${other}`);
+  await page.getByRole("combobox", { name: "Work order", exact: true }).selectOption(current);
+  await page.getByRole("button", { name: "Open job", exact: true }).click();
+  await expect(work).toHaveAttribute("id", `work-${current}`);
+  await expect(work.locator(".task-list")).toContainText(description);
+  await captureWidths(page, "work-long-content");
 });
