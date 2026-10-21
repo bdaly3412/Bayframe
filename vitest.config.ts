@@ -8,5 +8,6 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.{ts,tsx}"],
+    exclude: ["**/*.integration.test.ts", ...(process.env.BAYFRAME_LIVE_TESTS === "1" ? [] : ["src/auth/integration.test.ts"])],
   },
 });

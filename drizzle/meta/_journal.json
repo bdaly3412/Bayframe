@@ -8,6 +8,55 @@
       "when": 1792504099255,
       "tag": "0000_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792507967610,
+      "tag": "0001_persistence_support",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792507978482,
+      "tag": "0002_workshop_staff_resources",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792603650717,
+      "tag": "0003_confused_molten_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792603673488,
+      "tag": "0004_workflow_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792604047930,
+      "tag": "0005_locking_privileges",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792604232993,
+      "tag": "0006_estimate_capability",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792604605837,
+      "tag": "0007_absence_audit",
+      "breakpoints": true
     }
   ]
 }

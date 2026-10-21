@@ -1,6 +1,8 @@
 # Interface design direction
 
-Status: requirements and proposals; no screens/components exist. Updated: 20 October 2026.
+Status: request, login, resources, schedule/work and estimate-decision surfaces
+implemented. Updated: 21 October 2026. Existing system typography and restrained
+stone/amber palette continue; shared rules are in `src/app/globals.css`.
 
 ## Purpose
 

@@ -1,0 +1,279 @@
+{
+  "id": "df37542f-2702-485b-bd94-3142211aa7a0",
+  "prevId": "bd754265-9685-4d81-81e3-d43b30e15d6e",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "app.resources": {
+      "name": "resources",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "staff_id": {
+          "name": "staff_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "resources_workshop_id_workshops_id_fk": {
+          "name": "resources_workshop_id_workshops_id_fk",
+          "tableFrom": "resources",
+          "tableTo": "workshops",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        },
+        "resources_workshop_staff_fk": {
+          "name": "resources_workshop_staff_fk",
+          "tableFrom": "resources",
+          "tableTo": "staff",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "staff_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "resources_workshop_id_key": {
+          "name": "resources_workshop_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "id"
+          ]
+        },
+        "resources_workshop_type_name_key": {
+          "name": "resources_workshop_type_name_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "type",
+            "name"
+          ]
+        },
+        "resources_workshop_staff_key": {
+          "name": "resources_workshop_staff_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "staff_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "resources_type_check": {
+          "name": "resources_type_check",
+          "value": "\"app\".\"resources\".\"type\" IN ('bay', 'technician')"
+        },
+        "resources_staff_type_check": {
+          "name": "resources_staff_type_check",
+          "value": "\"app\".\"resources\".\"staff_id\" IS NULL OR \"app\".\"resources\".\"type\" = 'technician'"
+        },
+        "resources_name_check": {
+          "name": "resources_name_check",
+          "value": "\"app\".\"resources\".\"name\" = btrim(\"app\".\"resources\".\"name\") AND length(\"app\".\"resources\".\"name\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.staff": {
+      "name": "staff",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth_user_id": {
+          "name": "auth_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "staff_workshop_id_workshops_id_fk": {
+          "name": "staff_workshop_id_workshops_id_fk",
+          "tableFrom": "staff",
+          "tableTo": "workshops",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        },
+        "staff_auth_user_id_users_id_fk": {
+          "name": "staff_auth_user_id_users_id_fk",
+          "tableFrom": "staff",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "auth_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "staff_workshop_user_key": {
+          "name": "staff_workshop_user_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "auth_user_id"
+          ]
+        },
+        "staff_workshop_id_key": {
+          "name": "staff_workshop_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "staff_role_check": {
+          "name": "staff_role_check",
+          "value": "\"app\".\"staff\".\"role\" IN ('manager', 'adviser', 'technician')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.workshops": {
+      "name": "workshops",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workshops_name_check": {
+          "name": "workshops_name_check",
+          "value": "\"app\".\"workshops\".\"name\" = btrim(\"app\".\"workshops\".\"name\") AND length(\"app\".\"workshops\".\"name\") > 0"
+        },
+        "workshops_timezone_check": {
+          "name": "workshops_timezone_check",
+          "value": "app.valid_timezone(\"app\".\"workshops\".\"timezone\")"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "app": "app"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

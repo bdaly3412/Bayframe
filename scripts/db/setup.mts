@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { existsSync, writeFileSync } from "node:fs";
 import { loadEnvFile } from "node:process";
-import { admin, checkExposure, checkRole, connect, fail, password, prepareDatabase, roles } from "./local.mts";
+import { admin, checkExposure, checkRole, connect, fail, password, prepareAuthReference, prepareDatabase, roles } from "./local.mts";
 
 async function setup(): Promise<void> {
   checkExposure();
@@ -17,6 +17,7 @@ async function setup(): Promise<void> {
     checkRole(role);
   }
   prepareDatabase("postgres");
+  prepareAuthReference();
   for (const role of roles) {
     const client = await connect(role);
     await client.end();

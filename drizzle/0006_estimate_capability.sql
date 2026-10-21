@@ -1,0 +1,2 @@
+ALTER TABLE "app"."estimates" DROP CONSTRAINT "estimate_issue_check";--> statement-breakpoint
+ALTER TABLE "app"."estimates" ADD CONSTRAINT "estimate_issue_check" CHECK ("app"."estimates"."state"='draft' OR ("app"."estimates"."token_hash" IS NOT NULL AND "app"."estimates"."token_hash" ~ '^[a-f0-9]{64}$' AND "app"."estimates"."expires_at" IS NOT NULL AND "app"."estimates"."issued_at" IS NOT NULL AND isfinite("app"."estimates"."expires_at") AND "app"."estimates"."expires_at">"app"."estimates"."issued_at"));

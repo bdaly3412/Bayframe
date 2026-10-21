@@ -1,22 +1,22 @@
 # Roadmap and project state
 
-Updated: 20 October 2026.
+Updated: 21 October 2026.
 
 ## Current state
 
-The checkout started clean on `main` at `1de07b6` on 20 October 2026. The owner
-reviewed and committed BF-004, accepted ADR-001 through ADR-003 and authorized
-BF-005 only. BF-005 implementation and local checks are complete in Review:
-project-local Supabase/PostgreSQL, separate migration/runtime logins, Drizzle's
-schema/extension baseline and disposable real-database verification. See
-[database setup](docs/database.md) and executed evidence below. Changes remain
-unstaged and uncommitted. No remote state was changed or rechecked. Repository
-history changes remain owner-controlled. BF-006 has not started or been authorized.
+Work continued on `main` at `0ef3e78`, preserving uncommitted BF-006 work. On
+21 October the owner authorized the remaining local demonstration and accepted
+the policies in [workflow.md](docs/workflow.md). ADR-001 through ADR-003 remain
+accepted. Staff access, requests, booking/resource transactions, work orders,
+versioned estimates and customer decisions are implemented, with a resource
+timeline and detailed table. Local evidence is below. BF-006 through BF-011 are
+in Review pending owner review; changes remain unstaged and uncommitted. No
+remote state was changed. Publication and deployment remain owner operations.
 
 The initial planning window is 20 October–16 November 2026, with a provisional
 72–100 focused-hour budget. Re-estimate after the first working database and
 authentication slice; do not claim tracked time retroactively.
-Actual active time has not been recorded for BF-002 through BF-005.
+Actual active time has not been recorded for BF-002 through BF-006.
 
 ## Milestones
 
@@ -30,9 +30,9 @@ Actual active time has not been recorded for BF-002 through BF-005.
 These are targets. A live deployment requires separate approval. Reduce interface
 scope or move dates if core allocation correctness is not proven.
 
-Each approved stage ends with implementation, relevant checks, diff review and
-manual staging/commit instructions. The next stage starts after owner approval;
-routine substeps within the current stage do not require repeated approval.
+The remaining local implementation was approved as one coherent scope with
+checks and review throughout. Manual review/commit is the next boundary;
+remote CI execution and deployment are not implied by local completion.
 
 ## Task board
 
@@ -47,13 +47,13 @@ deliverable.
 | BF-002 / Done | Review three ADRs and resolve bootstrap assumptions; avoid competing architectures | BF-001 complete | 1–2h estimated; actual not recorded / Owner review | Owner accepted ADR-001 through ADR-003 on 20 October 2026; no database/auth implementation implied |
 | BF-003 / Done | Bootstrap Next.js, strict TypeScript, pnpm and Vitest; reproducible engineering baseline | Accepted BF-002; owner authorized BF-003 | 2–3h estimated; actual not recorded / Engineering, owner review | Owner reviewed and committed as `c123d29`; prior install/browser evidence below; pinned runtime, lint, standalone typecheck, tests and production build reverified in BF-004 |
 | BF-004 / Done | Interval semantics; establish back-to-back scheduling behaviour | Owner reviewed/committed BF-003 and authorized BF-004 | 1–2h estimated; actual not recorded / Engineering, owner review | Owner reviewed and committed as `1de07b6`; 25 tests and required checks pass |
-| BF-005 / Review | Local database and migration baseline; reproduce persistence | BF-004 committed, accepted ADRs, Docker Linux engine available | 3–4h estimated; actual not recorded / Engineering, owner review | Empty real PostgreSQL migrations and unchanged second run pass; PostgreSQL 17.11 / btree_gist 1.7; privilege checks, lint/typecheck/25 tests/build pass; manual review/commit pending |
-| BF-006 / Backlog | Workshop, staff and resources; enforce ownership | BF-005 | 3–4h / Engineering | Positive fixtures and invalid relationship/uniqueness tests run on real PostgreSQL |
-| BF-007 / Backlog | Staff login and protected resource read; prove access boundary | BF-003, BF-006 | 3–4h / Engineering | Valid staff succeeds; anonymous, inactive/non-staff and wrong-role cases fail; no privileged data path exposed |
-| BF-008 / Backlog | Document setup and prepare initial CI; reproduce local checks | BF-004 through BF-007 | 2–3h / Engineering | Local checks pass; workflow prepared; remote CI verified only after owner pushes |
-| BF-009 / Backlog | Booking engine and failure tests; prove primary invariant | M1 and approved detailed issue | Re-estimate after M1 / Engineering | M2 criteria plus real two-connection contention and rollback tests pass |
-| BF-010 / Backlog | Work orders, estimates and decisions; complete operational workflow | M2 and approved detailed issue | Re-estimate after M2 / Engineering | M3 criteria, stale/duplicate decision tests and permissions pass |
-| BF-011 / Backlog | Demonstration and release review; present reproducible evidence | M3 and approved detailed issue | Re-estimate after M3 / Engineering | M4 evidence inspected; deployment remains a separate authorization |
+| BF-005 / Done | Local database and migration baseline; reproduce persistence | BF-004 committed, accepted ADRs, Docker Linux engine available | 3–4h estimated; actual not recorded / Engineering, owner review | Owner reviewed and committed as `0ef3e78`; real PostgreSQL migration/privilege baseline and required checks passed |
+| BF-006 / Review | Workshop, staff and resources; enforce ownership | Owner-reviewed/committed BF-005; accepted ADRs; Docker Linux engine | 3–4h estimated; actual not recorded / Engineering, owner review | Three migrations and unchanged second run; positive synthetic fixtures and 26 rejection cases on real PostgreSQL; privilege/auth ownership checks, lint/typecheck/25 unit tests/build pass; manual review/commit pending |
+| BF-007 / Review | Staff login and protected resource read; prove access boundary | BF-003, BF-006 | Prior estimate 3–4h; actual not recorded / Engineering | 11 actual Auth/PostgreSQL cases pass: scoped success, signup denial, anonymous/inactive/nonstaff/wrong-role/wrong-workshop denial and logout |
+| BF-008 / Review | Document setup and prepare initial CI; reproduce local checks | BF-004 through BF-007 | Prior estimate 2–3h; actual not recorded / Engineering | Local setup/checks pass; SHA-pinned workflow prepared; remote CI unverified |
+| BF-009 / Review | Booking engine and failure tests; prove primary invariant | M1; accepted demo scope | Actual not recorded / Engineering | SQL exclusion/pair constraints, real lock waits, state races, rollback and 100-attempt contention pass |
+| BF-010 / Review | Work orders, estimates and decisions; complete operational workflow | BF-009; accepted demo scope | Actual not recorded / Engineering | Assigned work, immutable snapshots, version/expiry/replay guards and complete local journey pass |
+| BF-011 / Review | Demonstration and release review; present reproducible evidence | BF-010; accepted timeline addition | Actual not recorded / Engineering | Browser journey, resource timeline and responsive review; local release boundary documented; no deployment or remote CI claim |
 
 BF-003 through BF-008 total roughly 14–21 hours before contingency and ADR work.
 These are planning estimates, not measured execution times or guarantees.
@@ -62,14 +62,13 @@ These are planning estimates, not measured execution times or guarantees.
 
 For each implementation issue, record objective, business/technical reason,
 dependencies, in/out-of-scope items, acceptance criteria, tests, estimated effort,
-owner and definition of done. The milestone rows are not authorization to build
-the whole application. Before BF-009 onward, split the milestone into bounded
-issues using that format.
+owner and definition of done. The 21 October approved scope below defines BF-009
+onward; later expansion still needs explicit scope and acceptance criteria.
 
 Foundation excludes dashboards, customer approval links and a full booking engine.
 Later scope reductions may include a schedule table instead of a custom timeline,
-minimal settings and no automated notifications. These remain proposals until
-accepted; do not silently remove the required end-to-end workflow.
+minimal settings and no automated notifications. The delivered demonstration
+retains the complete workflow and includes both a resource timeline and table.
 
 ## Evidence and limitations
 
@@ -78,9 +77,9 @@ accepted; do not silently remove the required end-to-end workflow.
   diff passed `git diff --check`; the owner subsequently committed the foundation.
 - 19 October: Docker CLI/Compose were available, but the Linux engine was
   unreachable. Recheck before database setup; do not assume it remains stopped.
-- No garage-operator validation, business-table/transaction/concurrency checks,
-  automated end-to-end suite, remote CI or deployment evidence exists yet.
-  BF-005 database infrastructure evidence is recorded below.
+- No garage-operator validation, booking/allocation/concurrency checks, automated
+  end-to-end suite, remote CI or deployment evidence exists yet. BF-005 database
+  infrastructure and BF-006 persistence evidence are recorded below.
 - The owner committed the documentation foundation as `abf957f` on 20 October.
   The later ignore-policy commit is `3d6ebba`; read-only remote verification found
   the same SHA on `refs/heads/main`. The prior access blocker is resolved for that
@@ -121,17 +120,169 @@ accepted; do not silently remove the required end-to-end workflow.
 
 ## Next action
 
-Owner reviews BF-005 and manually stages/commits its explicit public paths:
-`README.md`, `ROADMAP.md`, `STACK.md`, `docs/architecture.md`, `docs/database.md`,
-`package.json`, `pnpm-lock.yaml`, `tsconfig.json`, `drizzle.config.ts`,
-`drizzle/0000_baseline.sql`, both `drizzle/meta/` JSON files, `scripts/db/schema.ts`,
-the four `scripts/db/*.mts` files and `supabase/config.toml`.
-Then separately authorize BF-006 workshop/staff/resource persistence in a fresh
-task. Before restarting local services, inspect network exposure as documented;
-loopback-only publication was not established on this Docker Desktop host.
-No business tables or authentication flow are included in BF-005.
+Owner reviews the complete local demonstration, then manually stages only the
+public paths, inspects the staged diff and commits. No repository history or
+remote operation was executed during implementation. Suggested commit message:
+`feat: implement workshop booking and approval workflow`.
 
-Suggested owner commit message: `feat: establish local database migration baseline`.
+Run instructions, synthetic login location and stop conditions are in
+[workflow.md](docs/workflow.md). The local services are stopped with volumes
+preserved. Inspect exposure before restarting. Remote CI must be verified after
+an owner-controlled push; deployment still requires its own explicit decision.
+
+## BF-007 through BF-011 implementation and evidence
+
+Objective: complete the local request-to-handover demonstration while proving
+allocation correctness, permissions and exact-version customer decisions.
+Owner: Engineering, owner review pending. Actual active time was not recorded.
+Prerequisites: accepted ADRs, preserved BF-006 work on `main` at `0ef3e78`, pinned
+runtime/dependencies and the project-local Docker platform. Scope was accepted on
+21 October, including the policies in [workflow.md](docs/workflow.md) and both a
+resource timeline and schedule table. Architecture remains the accepted monolith;
+no service, provider or deployment was provisioned.
+
+BF-009 includes request validation/customer-vehicle scope, advisory availability,
+atomic confirmation/cancellation/rescheduling, resource absences and a local-day
+timeline. BF-010 includes unique check-in/work orders, assigned tasks, explicit
+work transitions, integer-GBP estimates, immutable issue snapshots, hashed 48-hour
+capabilities, exact-version decisions and audit. BF-011 includes a complete
+synthetic browser journey, responsive/keyboard evidence and the local release
+boundary. Staff/resource administration is fixture setup, not a management UI.
+No notifications, real customers, production provisioning or deployment is in scope.
+
+Executed on 21 October:
+
+- Frozen-lockfile install, lint (including scripts/browser/config files), standalone
+  typecheck, 47 unit tests in seven files and production build pass. The build
+  has public `/`, `/request`, `/decision` and protected staff routes; no secrets
+  are deliberately exposed through public environment variables.
+- `db:verify` passes on PostgreSQL 17.11 with btree_gist 1.7: eight migrations,
+  matching journal/file hashes, second run zero pending, preserved auth DDL/ACLs,
+  26 foundation rejection cases and baseline role/API denial checks.
+- Six real-database integration cases pass in their own disposable database.
+  They exercise the full lifecycle; exclusion, adjacency, pair/scope/finite-time
+  checks; successful and rolled-back rescheduling; retained cancellation history;
+  same-booking/different-resource and confirm/cancel/reschedule races; an observed
+  independent resource-lock wait; forced failure after allocation and before audit;
+  inactive/forged-role/unassigned-tech denial; issued snapshot/line/total guards;
+  and version, expiry, replay and concurrent issue/decision handling.
+- The final 100-attempt diagnostic had one confirmation, 99 controlled conflicts,
+  zero unexpected failures and two active allocations, one for each resource.
+  Allocation phase was 192ms in that diagnostic with pool max five. This is local
+  correctness evidence, not 100 simultaneous connections or a throughput claim.
+- Eleven actual local Auth/runtime tests pass, including global signup denial,
+  password sign-in, anonymous/inactive/nonstaff/wrong-role/wrong-workshop denial,
+  scoped manager/adviser reads, explicit technician permission and logout.
+- Two reproducible Chrome browser cases pass. The full journey covers preserved
+  invalid input, conflict handling/cancellation, check-in, exact estimate issue,
+  customer approval, technician data minimization/task completion and handover.
+  The timeline shows both real resource allocations for the selected local day;
+  clicking a reservation focuses its booking. Desktop 1440×1000 and phone 390×844
+  screenshots were inspected; no document overflow occurred. Artifacts are local
+  under `output/playwright/`. Request availability also passed an interactive
+  browser check with zero recorded console warnings/errors for that view.
+- Drizzle snapshot consistency and no-change generation pass. The public source,
+  migration SQL and permissions were reviewed, and publication/local-link/diff
+  checks passed. The staging area remains empty. Prepared CI uses pinned official
+  actions and local database/auth/browser gates; no remote run was performed.
+
+Review corrected real defects before closeout: row-lock permission prerequisites,
+explicit non-null capability checks (SQL CHECK accepts UNKNOWN), expiry/version
+validation before replay acknowledgement, development-effect token preservation,
+and keeping a newly issued link visible until copied. Enabling the email provider
+while disabling global signup was verified by actual login and signup-denial tests.
+One database run was interrupted by a local service restart; its exact disposable
+database was inspected and removed without force before the clean passing run.
+All disposable verification databases were removed; only synthetic demo records
+remain in the local application database. No pre-existing database/volume was reset.
+
+Limitations: Docker still publishes platform ports on all interfaces on this host;
+LAN isolation is unproved. Physical occupancy/overruns beyond planned intervals,
+real workshop assumptions, production TLS/rate limiting, account recovery,
+retention/anonymization, backup/recovery, remote CI and deployment are unverified.
+Customer identity is possession of a manually shared capability; independent
+recipient verification is not claimed. The interface creates one line per
+estimate version; the service supports up to 50. Builds/artifacts remain local:
+public release requires a clean source-only build and package inclusion audit.
+The historical BF-006 and earlier sections below describe their original scopes;
+the current state and evidence above supersede their old next-action statements.
+
+## BF-006 implementation and evidence
+
+Objective: establish workshop ownership and valid staff/resource relationships
+before the first protected read. Owner: Engineering; estimate 3–4 active hours,
+actual not recorded. Prerequisites verified: BF-005 reviewed/committed at
+`0ef3e78`, clean `main`, accepted ADR-001 through ADR-003, Node.js 24.13.0,
+pnpm 11.25.0, available Docker Linux engine and passing baseline lint, standalone
+typecheck, 25 tests and production build. The documented all-interface network
+exposure limitation and project network option were inspected before restart.
+No accepted architecture was changed; no dependencies were added.
+
+Implemented three `app` tables, Drizzle declarations/snapshots and two additive
+migrations after the unchanged BF-005 baseline. A private timezone validation
+function precedes the tables. Constraints enforce required references, valid
+roles/types, nonempty space-trimmed names, named timezones, unique workshop/user
+membership, resource names per workshop/type and one resource per linked staff
+membership. A composite key prevents cross-workshop staff links on insert/update;
+bays cannot link staff. Technicians may be unlinked, and schedulable capability
+does not require the same-named authorization role. See [persisted rules](docs/data-model.md#bf-006-persisted-rules).
+
+The actual Supabase `auth.users.id` is a required UUID primary key, with the table
+owned by `supabase_auth_admin`. Setup grants only auth schema USAGE and ID-column
+REFERENCES to the migrator through the local platform administrator; ordinary
+`postgres` cannot issue that schema grant on this image. Auth/platform ownership
+and separate application logins remain intact. All foreign keys use RESTRICT on
+delete/update. Staff/resource deactivation preserves records; no auth deletion
+cascade can erase memberships. Runtime receives SELECT only on the three tables,
+with no business writes or auth access. API roles remain denied and `app` stays
+outside Data API exposure. No runtime client is imported by the application.
+
+Executed `pnpm db:setup` without credential replacement; `pnpm db:verify` created
+a new random template0 database, restored actual local auth DDL/ownership/ACLs
+without data, then applied all three application migrations. File/journal hashes
+matched, and a second run had zero pending migrations and an unchanged journal.
+PostgreSQL was **17.11**, with **btree_gist 1.7** in `app`. Synthetic fixtures
+covered three workshops, both identities with memberships in multiple workshops,
+all staff roles, bays, linked/unlinked technicians, generated resource IDs,
+active defaults and deactivation. Twenty-six invalid value/relationship/uniqueness/
+deletion cases passed, including actual auth-owner deletion refusal and linked
+membership/resource moves between existing workshops. Synthetic records existed
+only in the disposable database, which was removed without forced disconnection.
+
+Verified actual runtime login, positive reads and denied DML/TRUNCATE,
+schema/table/temp DDL, auth/journal reads, timezone function execution and migration
+role assumption. Table/schema ownership, API ACL denial, no auth DML for either
+application role and rolled-back default table/function ACL probes passed.
+Auth schema-only dumps matched after migrations/fixtures (ignoring pg_dump's
+random restrict nonce), preserving platform DDL/ownership/ACLs. The initial test
+harness needed platform-admin restore/grants and an owner-role switch for the
+auth deletion probe; these were corrected and the full verifier then passed.
+
+Executed additive `pnpm db:migrate` twice on the existing local project database.
+Its journal has three entries and its three business tables remain empty; no
+synthetic identities or business data were inserted there. No existing database
+or volume was reset/deleted. No disposable verification databases remain.
+`pnpm exec drizzle-kit check` passes and `pnpm db:generate` reports no changes.
+Final `pnpm lint`, standalone `pnpm typecheck`, `pnpm test` (25/25 in two files)
+and `pnpm build` pass. Production output retains only the existing static routes.
+
+Complete SQL/schema/snapshot/script/document diff review found no outstanding
+integrity/security defect. Ownership-move tests were corrected to isolate the
+composite foreign key rather than unrelated existence/uniqueness constraints.
+Public encoding/formatting/link/publication checks and `git diff --check` passed;
+the index remains empty. Excluded configuration, including `next.config.ts`, was
+preserved. No Git history, repository/account settings or remote state was mutated.
+Bayframe services were stopped with volumes preserved at closeout.
+
+Limitations: all-interface Docker port publication remains unresolved; LAN
+isolation is unproved. Runtime SELECT does not authorize workshop scope: BF-007
+must verify sessions, active membership and permitted reads at server boundaries.
+Resource active flags do not establish availability. Booking/allocation SQL,
+scheduling constraints, retention/anonymization, auth flows, availability services,
+UI expansion, CI, deployment and release packaging are excluded/unverified.
+No browser or second-machine check was repeated because dependencies/UI are
+unchanged. BF-006 is in Review pending owner review/manual commit; BF-007 remains
+unstarted and needs separate authorization.
 
 ## BF-005 implementation and evidence
 
@@ -197,6 +348,7 @@ workshop/staff/resource tables, booking/allocation SQL, scheduling constraints,
 auth flows, availability services, UI changes, CI or deployment. No second-machine
 installation/browser check was repeated. BF-006 requires separate authorization
 and must verify the actual auth reference/deletion rules against the local schema.
+This historical BF-005 closeout is superseded by the BF-006 evidence above.
 
 ## BF-004 implementation and evidence
 

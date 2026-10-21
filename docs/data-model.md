@@ -1,6 +1,10 @@
 # Data model
 
-Status: logical proposal; no SQL schema or migration exists. Updated: 20 October 2026.
+Status: local workflow persistence implemented, 21 October 2026. The 14 tables are
+declared in `scripts/db/schema.ts` and `scripts/db/workflow-schema.ts`. Reviewed
+custom SQL adds scheduling and immutability guards. The accepted demonstration
+rules and exact supported behaviour are in [workflow.md](workflow.md); broader
+ownership-transfer and retention requirements remain unresolved for real use.
 
 ```mermaid
 erDiagram
@@ -27,9 +31,9 @@ ownership-transfer semantics must be agreed before customer workflows.
 
 | Entity | Important fields and constraints to design |
 | --- | --- |
-| Workshop | UUID, name, validated IANA timezone |
-| Staff | UUID, workshop, auth-user UUID, role, active flag; unique workshop/user membership |
-| Resource | UUID, workshop, bay/technician type, name, optional staff link; decide staff-link/type consistency |
+| Workshop | UUID, nonempty space-trimmed name, validated timezone |
+| Staff | UUID, required workshop/auth-user UUIDs, manager/adviser/technician role, active flag; unique workshop/user membership |
+| Resource | UUID, required workshop, bay/technician type, nonempty space-trimmed name, active flag, optional same-workshop staff link for technicians only; unique workshop/type/name and workshop/staff link |
 | Customer | UUID, workshop ownership, required contact fields defined by workflow; no assumed global email uniqueness |
 | Vehicle | UUID, customer/workshop relationship, registration and descriptive fields; define normalization/ownership changes |
 | Booking | UUID, workshop, customer, vehicle, state and requested interval; related entities must belong together |
@@ -45,6 +49,34 @@ Audit events must represent booking and estimate events as well as work-order
 events. Requiring a work-order ID for every event would prevent recording a
 booking request before a work order exists. Decide reference constraints before
 implementing the audit schema; do not use an unchecked generic entity ID by default.
+
+## BF-006 persisted rules
+
+`scripts/db/schema.ts` and versioned Drizzle SQL own the three `app` tables.
+UUIDs default to PostgreSQL-generated values; staff/resources default active.
+Workshop names need not be unique. Resource names are case-sensitive and unique
+within workshop/type, including inactive rows. Multiple unlinked technician
+resources are allowed; one membership can link at most one technician resource.
+The same auth user can have one membership in each of several workshops.
+
+A composite foreign key prevents cross-workshop staff/resource links on inserts
+and updates. Bays cannot link staff. A technician resource may be unlinked;
+staff authorization role is separate from schedulable capability, so the linked
+member need not have the technician role. Active flags support retirement without
+removing identity or resource history; they do not enforce scheduling eligibility.
+Application permission and availability checks belong to later stages.
+
+The timezone check accepts `UTC` and named zones/aliases in PostgreSQL's timezone
+catalogue containing `/`, excluding `posix/` and `right/` namespaces. It rejects
+abbreviations and unknown names; it does not canonicalize aliases. The initial
+synthetic workshop uses `Europe/London`. DST input handling remains future work.
+
+Staff references the actual platform-owned `auth.users(id)` UUID primary key.
+Auth identity updates/deletes and workshop/staff key changes/deletes are restricted
+when referenced. No cascades remove operational records. Deactivate staff/resources
+instead of deleting them. Runtime has SELECT only; future authorized write paths
+must explicitly introduce their needed grants and permission checks. Retention,
+anonymization and authorized correction are still undefined.
 
 ## Scheduling constraints
 
@@ -88,7 +120,7 @@ Initially restrict deletion of referenced operational history. Define retention,
 anonymization and authorized correction separately; do not cascade-delete
 approvals or audit history accidentally. Decide indexes from actual access paths.
 
-Proposed migration owner: Drizzle. Version custom SQL alongside generated SQL.
+Accepted migration owner: Drizzle. Version custom SQL alongside generated SQL.
 Verify clean-database application, required constraints, privileges and supported
 upgrade paths in disposable databases. No reset or production migration is
 authorized by this document.

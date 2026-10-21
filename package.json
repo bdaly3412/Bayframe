@@ -18,7 +18,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint src scripts drizzle.config.ts vitest.config.ts eslint.config.mjs postcss.config.mjs --max-warnings 0",
+    "lint": "eslint src scripts tests drizzle.config.ts vitest.config.ts vitest.integration.config.ts playwright.config.ts eslint.config.mjs postcss.config.mjs --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:start": "supabase start",
@@ -26,16 +26,25 @@
     "db:setup": "node scripts/db/setup.mts",
     "db:migrate": "node --env-file=.env.local scripts/db/migrate.mts",
     "db:verify": "node --env-file=.env.local scripts/db/verify.mts",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "auth:setup": "node scripts/auth/configure.mts",
+    "demo:seed": "node --env-file=.env.local scripts/auth/seed.mts",
+    "test:integration": "node --env-file=.env.local scripts/db/integration.mts",
+    "test:browser": "playwright test"
   },
   "dependencies": {
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.118.0",
     "drizzle-orm": "0.45.4",
     "next": "16.4.2",
     "pg": "8.23.1",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "server-only": "0.0.1",
+    "zod": "4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "24.19.2",
     "@types/pg": "8.23.1",

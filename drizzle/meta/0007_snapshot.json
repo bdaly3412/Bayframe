@@ -1,0 +1,1332 @@
+{
+  "id": "fb7fe554-cbd5-427b-b85a-3542dcc6568f",
+  "prevId": "820fd326-c52e-4da6-adb0-9470e290794a",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "app.resources": {
+      "name": "resources",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "staff_id": {
+          "name": "staff_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "resources_workshop_id_workshops_id_fk": {
+          "name": "resources_workshop_id_workshops_id_fk",
+          "tableFrom": "resources",
+          "tableTo": "workshops",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        },
+        "resources_workshop_staff_fk": {
+          "name": "resources_workshop_staff_fk",
+          "tableFrom": "resources",
+          "tableTo": "staff",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "staff_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "resources_workshop_id_key": {
+          "name": "resources_workshop_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "id"
+          ]
+        },
+        "resources_workshop_type_name_key": {
+          "name": "resources_workshop_type_name_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "type",
+            "name"
+          ]
+        },
+        "resources_workshop_staff_key": {
+          "name": "resources_workshop_staff_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "staff_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "resources_type_check": {
+          "name": "resources_type_check",
+          "value": "\"app\".\"resources\".\"type\" IN ('bay', 'technician')"
+        },
+        "resources_staff_type_check": {
+          "name": "resources_staff_type_check",
+          "value": "\"app\".\"resources\".\"staff_id\" IS NULL OR \"app\".\"resources\".\"type\" = 'technician'"
+        },
+        "resources_name_check": {
+          "name": "resources_name_check",
+          "value": "\"app\".\"resources\".\"name\" = btrim(\"app\".\"resources\".\"name\") AND length(\"app\".\"resources\".\"name\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.staff": {
+      "name": "staff",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth_user_id": {
+          "name": "auth_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "staff_workshop_id_workshops_id_fk": {
+          "name": "staff_workshop_id_workshops_id_fk",
+          "tableFrom": "staff",
+          "tableTo": "workshops",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        },
+        "staff_auth_user_id_users_id_fk": {
+          "name": "staff_auth_user_id_users_id_fk",
+          "tableFrom": "staff",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "auth_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "staff_workshop_user_key": {
+          "name": "staff_workshop_user_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "auth_user_id"
+          ]
+        },
+        "staff_workshop_id_key": {
+          "name": "staff_workshop_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "staff_role_check": {
+          "name": "staff_role_check",
+          "value": "\"app\".\"staff\".\"role\" IN ('manager', 'adviser', 'technician')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.workshops": {
+      "name": "workshops",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workshops_name_check": {
+          "name": "workshops_name_check",
+          "value": "\"app\".\"workshops\".\"name\" = btrim(\"app\".\"workshops\".\"name\") AND length(\"app\".\"workshops\".\"name\") > 0"
+        },
+        "workshops_timezone_check": {
+          "name": "workshops_timezone_check",
+          "value": "app.valid_timezone(\"app\".\"workshops\".\"timezone\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.absences": {
+      "name": "absences",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_at": {
+          "name": "start_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_at": {
+          "name": "end_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "absences_workshop_id_resource_id_resources_workshop_id_id_fk": {
+          "name": "absences_workshop_id_resource_id_resources_workshop_id_id_fk",
+          "tableFrom": "absences",
+          "tableTo": "resources",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "resource_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "absence_interval_check": {
+          "name": "absence_interval_check",
+          "value": "isfinite(\"app\".\"absences\".\"start_at\") AND isfinite(\"app\".\"absences\".\"end_at\") AND \"app\".\"absences\".\"start_at\" < \"app\".\"absences\".\"end_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.allocations": {
+      "name": "allocations",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "booking_id": {
+          "name": "booking_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_at": {
+          "name": "start_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_at": {
+          "name": "end_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "released_at": {
+          "name": "released_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "allocations_workshop_id_booking_id_bookings_workshop_id_id_fk": {
+          "name": "allocations_workshop_id_booking_id_bookings_workshop_id_id_fk",
+          "tableFrom": "allocations",
+          "tableTo": "bookings",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "booking_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "allocations_workshop_id_resource_id_resources_workshop_id_id_fk": {
+          "name": "allocations_workshop_id_resource_id_resources_workshop_id_id_fk",
+          "tableFrom": "allocations",
+          "tableTo": "resources",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "resource_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "allocation_interval_check": {
+          "name": "allocation_interval_check",
+          "value": "isfinite(\"app\".\"allocations\".\"start_at\") AND isfinite(\"app\".\"allocations\".\"end_at\") AND \"app\".\"allocations\".\"start_at\" < \"app\".\"allocations\".\"end_at\""
+        },
+        "allocation_kind_check": {
+          "name": "allocation_kind_check",
+          "value": "\"app\".\"allocations\".\"kind\" IN ('bay','technician')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.audit_events": {
+      "name": "audit_events",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "booking_id": {
+          "name": "booking_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "work_order_id": {
+          "name": "work_order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estimate_id": {
+          "name": "estimate_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "details": {
+          "name": "details",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "audit_events_workshop_id_booking_id_bookings_workshop_id_id_fk": {
+          "name": "audit_events_workshop_id_booking_id_bookings_workshop_id_id_fk",
+          "tableFrom": "audit_events",
+          "tableTo": "bookings",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "booking_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_events_workshop_id_work_order_id_work_orders_workshop_id_id_fk": {
+          "name": "audit_events_workshop_id_work_order_id_work_orders_workshop_id_id_fk",
+          "tableFrom": "audit_events",
+          "tableTo": "work_orders",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "work_order_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_events_workshop_id_estimate_id_estimates_workshop_id_id_fk": {
+          "name": "audit_events_workshop_id_estimate_id_estimates_workshop_id_id_fk",
+          "tableFrom": "audit_events",
+          "tableTo": "estimates",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "estimate_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_events_workshop_id_actor_id_staff_workshop_id_id_fk": {
+          "name": "audit_events_workshop_id_actor_id_staff_workshop_id_id_fk",
+          "tableFrom": "audit_events",
+          "tableTo": "staff",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "actor_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_events_workshop_id_resource_id_resources_workshop_id_id_fk": {
+          "name": "audit_events_workshop_id_resource_id_resources_workshop_id_id_fk",
+          "tableFrom": "audit_events",
+          "tableTo": "resources",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "resource_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "audit_reference_check": {
+          "name": "audit_reference_check",
+          "value": "num_nonnulls(\"app\".\"audit_events\".\"booking_id\",\"app\".\"audit_events\".\"work_order_id\",\"app\".\"audit_events\".\"estimate_id\",\"app\".\"audit_events\".\"resource_id\") = 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.bookings": {
+      "name": "bookings",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vehicle_id": {
+          "name": "vehicle_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_at": {
+          "name": "start_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_at": {
+          "name": "end_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'requested'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bookings_workshop_id_workshops_id_fk": {
+          "name": "bookings_workshop_id_workshops_id_fk",
+          "tableFrom": "bookings",
+          "tableTo": "workshops",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bookings_workshop_id_vehicle_id_customer_id_vehicles_workshop_id_id_customer_id_fk": {
+          "name": "bookings_workshop_id_vehicle_id_customer_id_vehicles_workshop_id_id_customer_id_fk",
+          "tableFrom": "bookings",
+          "tableTo": "vehicles",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "vehicle_id",
+            "customer_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id",
+            "customer_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "bookings_scope_key": {
+          "name": "bookings_scope_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "booking_interval_check": {
+          "name": "booking_interval_check",
+          "value": "isfinite(\"app\".\"bookings\".\"start_at\") AND isfinite(\"app\".\"bookings\".\"end_at\") AND \"app\".\"bookings\".\"end_at\" = \"app\".\"bookings\".\"start_at\" + interval '60 minutes'"
+        },
+        "booking_state_check": {
+          "name": "booking_state_check",
+          "value": "\"app\".\"bookings\".\"state\" IN ('requested','confirmed','rejected','cancelled','checked-in')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.customers": {
+      "name": "customers",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "customers_workshop_id_workshops_id_fk": {
+          "name": "customers_workshop_id_workshops_id_fk",
+          "tableFrom": "customers",
+          "tableTo": "workshops",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "customers_scope_key": {
+          "name": "customers_scope_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "customer_text_check": {
+          "name": "customer_text_check",
+          "value": "length(btrim(\"app\".\"customers\".\"name\")) BETWEEN 1 AND 120 AND length(\"app\".\"customers\".\"email\") BETWEEN 3 AND 254"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.decisions": {
+      "name": "decisions",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estimate_id": {
+          "name": "estimate_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "decision": {
+          "name": "decision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "decisions_workshop_id_estimate_id_estimates_workshop_id_id_fk": {
+          "name": "decisions_workshop_id_estimate_id_estimates_workshop_id_id_fk",
+          "tableFrom": "decisions",
+          "tableTo": "estimates",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "estimate_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "decisions_estimate_id_unique": {
+          "name": "decisions_estimate_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "estimate_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "decision_check": {
+          "name": "decision_check",
+          "value": "\"app\".\"decisions\".\"decision\" IN ('accepted','rejected')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.estimate_lines": {
+      "name": "estimate_lines",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estimate_id": {
+          "name": "estimate_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_price": {
+          "name": "unit_price",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "estimate_lines_workshop_id_estimate_id_estimates_workshop_id_id_fk": {
+          "name": "estimate_lines_workshop_id_estimate_id_estimates_workshop_id_id_fk",
+          "tableFrom": "estimate_lines",
+          "tableTo": "estimates",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "estimate_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "line_values_check": {
+          "name": "line_values_check",
+          "value": "length(btrim(\"app\".\"estimate_lines\".\"description\")) BETWEEN 1 AND 500 AND \"app\".\"estimate_lines\".\"quantity\" BETWEEN 1 AND 1000 AND \"app\".\"estimate_lines\".\"unit_price\" BETWEEN 0 AND 1000000"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.estimates": {
+      "name": "estimates",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "work_order_id": {
+          "name": "work_order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'GBP'"
+        },
+        "net": {
+          "name": "net",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax": {
+          "name": "tax",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total": {
+          "name": "total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issued_at": {
+          "name": "issued_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "estimates_workshop_id_work_order_id_work_orders_workshop_id_id_fk": {
+          "name": "estimates_workshop_id_work_order_id_work_orders_workshop_id_id_fk",
+          "tableFrom": "estimates",
+          "tableTo": "work_orders",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "work_order_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "estimate_version_key": {
+          "name": "estimate_version_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "work_order_id",
+            "version"
+          ]
+        },
+        "estimate_scope_key": {
+          "name": "estimate_scope_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "id"
+          ]
+        },
+        "estimate_token_key": {
+          "name": "estimate_token_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "estimate_money_check": {
+          "name": "estimate_money_check",
+          "value": "\"app\".\"estimates\".\"version\" > 0 AND \"app\".\"estimates\".\"currency\"='GBP' AND \"app\".\"estimates\".\"net\" BETWEEN 0 AND 100000000 AND \"app\".\"estimates\".\"tax\" BETWEEN 0 AND 20000000 AND \"app\".\"estimates\".\"total\"=\"app\".\"estimates\".\"net\"+\"app\".\"estimates\".\"tax\""
+        },
+        "estimate_state_check": {
+          "name": "estimate_state_check",
+          "value": "\"app\".\"estimates\".\"state\" IN ('draft','issued','accepted','rejected','expired','superseded')"
+        },
+        "estimate_issue_check": {
+          "name": "estimate_issue_check",
+          "value": "\"app\".\"estimates\".\"state\"='draft' OR (\"app\".\"estimates\".\"token_hash\" IS NOT NULL AND \"app\".\"estimates\".\"token_hash\" ~ '^[a-f0-9]{64}$' AND \"app\".\"estimates\".\"expires_at\" IS NOT NULL AND \"app\".\"estimates\".\"issued_at\" IS NOT NULL AND isfinite(\"app\".\"estimates\".\"expires_at\") AND \"app\".\"estimates\".\"expires_at\">\"app\".\"estimates\".\"issued_at\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.tasks": {
+      "name": "tasks",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "work_order_id": {
+          "name": "work_order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "done": {
+          "name": "done",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tasks_workshop_id_work_order_id_work_orders_workshop_id_id_fk": {
+          "name": "tasks_workshop_id_work_order_id_work_orders_workshop_id_id_fk",
+          "tableFrom": "tasks",
+          "tableTo": "work_orders",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "work_order_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "task_description_check": {
+          "name": "task_description_check",
+          "value": "length(btrim(\"app\".\"tasks\".\"description\")) BETWEEN 1 AND 500"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.vehicles": {
+      "name": "vehicles",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "registration": {
+          "name": "registration",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "vehicles_workshop_id_workshops_id_fk": {
+          "name": "vehicles_workshop_id_workshops_id_fk",
+          "tableFrom": "vehicles",
+          "tableTo": "workshops",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "vehicles_workshop_id_customer_id_customers_workshop_id_id_fk": {
+          "name": "vehicles_workshop_id_customer_id_customers_workshop_id_id_fk",
+          "tableFrom": "vehicles",
+          "tableTo": "customers",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "customer_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "vehicles_scope_key": {
+          "name": "vehicles_scope_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "id",
+            "customer_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "registration_check": {
+          "name": "registration_check",
+          "value": "length(btrim(\"app\".\"vehicles\".\"registration\")) BETWEEN 1 AND 20"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "app.work_orders": {
+      "name": "work_orders",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workshop_id": {
+          "name": "workshop_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "booking_id": {
+          "name": "booking_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "technician_id": {
+          "name": "technician_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'ready'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "work_orders_workshop_id_booking_id_bookings_workshop_id_id_fk": {
+          "name": "work_orders_workshop_id_booking_id_bookings_workshop_id_id_fk",
+          "tableFrom": "work_orders",
+          "tableTo": "bookings",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "booking_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "work_orders_workshop_id_technician_id_staff_workshop_id_id_fk": {
+          "name": "work_orders_workshop_id_technician_id_staff_workshop_id_id_fk",
+          "tableFrom": "work_orders",
+          "tableTo": "staff",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "workshop_id",
+            "technician_id"
+          ],
+          "columnsTo": [
+            "workshop_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "work_orders_booking_id_unique": {
+          "name": "work_orders_booking_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "booking_id"
+          ]
+        },
+        "work_orders_scope_key": {
+          "name": "work_orders_scope_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workshop_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "work_order_state_check": {
+          "name": "work_order_state_check",
+          "value": "\"app\".\"work_orders\".\"state\" IN ('ready','in-progress','awaiting-approval','completed','closed')"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "app": "app"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

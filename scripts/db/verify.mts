@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readMigrationFiles } from "drizzle-orm/migrator";
-import { admin, applyMigrations, checkExposure, checkRole, connect, fail, prepareDatabase, roles } from "./local.mts";
+import { admin, applyMigrations, checkExposure, checkRole, connect, container, fail, prepareAuthReference, prepareDatabase, roles } from "./local.mts";
+import { verifyPersistence } from "./persistence-check.mts";
 
 async function verify(): Promise<void> {
   checkExposure();
@@ -21,6 +23,11 @@ async function verify(): Promise<void> {
   try {
     prepareDatabase(database);
     assert.equal(admin("SELECT count(*) FROM pg_namespace WHERE nspname IN ('app', 'drizzle', 'auth');", database), "0");
+    // Restore platform DDL/ownership only; never copy identities or other platform data.
+    const authSchema = execFileSync("docker", ["exec", container, "pg_dump", "-U", "postgres", "-d", "postgres", "--schema=auth", "--schema-only"], { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
+    execFileSync("docker", ["exec", "-i", container, "psql", "-X", "-U", "supabase_admin", "-d", database, "-v", "ON_ERROR_STOP=1", "-At"], { input: authSchema, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
+    console.log("Restored actual Supabase auth DDL and platform ownership; no data copied.");
+    prepareAuthReference(database);
     await applyMigrations(database);
     const migrator = await connect("bayframe_migrator", database);
     try {
@@ -38,13 +45,15 @@ async function verify(): Promise<void> {
       assert(extension, "btree_gist was not installed.");
       assert.equal(extension.nspname, "app");
       console.log(`PostgreSQL ${version}; btree_gist ${extension.extversion} installed in app.`);
-      assert.equal(admin("SELECT count(*) FROM pg_tables WHERE schemaname='app';", database), "0");
+      assert.equal(admin("SELECT string_agg(tablename, ',' ORDER BY tablename) FROM pg_tables WHERE schemaname='app';", database), "absences,allocations,audit_events,bookings,customers,decisions,estimate_lines,estimates,resources,staff,tasks,vehicles,work_orders,workshops");
       assert.equal(admin("SELECT pg_get_userbyid(nspowner) FROM pg_namespace WHERE nspname='app';", database), "bayframe_migrator");
       for (const role of ["anon", "authenticated", "service_role"]) {
         assert.equal(admin(`SELECT has_schema_privilege('${role}', 'app', 'USAGE') OR has_schema_privilege('${role}', 'app', 'CREATE');`, database), "f");
       }
 
-      // Synthetic objects exercise actual default ACLs without introducing business tables.
+      await verifyPersistence(migrator, database);
+
+      // Synthetic objects exercise default ACLs without leaving additional tables.
       await migrator.query("BEGIN");
       try {
         await migrator.query("CREATE TABLE app.privilege_probe (id integer); CREATE FUNCTION app.privilege_probe() RETURNS integer LANGUAGE sql AS 'SELECT 1'");
@@ -65,13 +74,35 @@ async function verify(): Promise<void> {
         "CREATE SCHEMA forbidden", "CREATE TABLE app.forbidden (id integer)",
         "CREATE TABLE public.forbidden (id integer)", "CREATE TEMP TABLE forbidden (id integer)",
         "SET ROLE bayframe_migrator", "SELECT * FROM drizzle.__drizzle_migrations",
+        "SELECT * FROM auth.users LIMIT 0",
+        "INSERT INTO app.workshops (name, timezone) VALUES ('Forbidden', 'UTC')",
+        "UPDATE app.staff SET active = false", "DELETE FROM app.resources",
+        "TRUNCATE app.resources", "SELECT app.valid_timezone('UTC')",
       ]) {
         await assert.rejects(runtime.query(statement), { code: "42501" }, `Runtime unexpectedly allowed: ${statement}`);
       }
+      for (const table of ["workshops", "staff", "resources"]) {
+        await runtime.query(`SELECT * FROM app.${table}`);
+        assert.equal(admin(`SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='app.${table}'::regclass;`, database), "bayframe_migrator");
+        for (const role of ["anon", "authenticated", "service_role"]) {
+          assert.equal(admin(`SELECT has_table_privilege('${role}', 'app.${table}', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER');`, database), "f");
+        }
+        assert.equal(admin(`SELECT has_table_privilege('bayframe_runtime', 'app.${table}', 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER');`, database), "f");
+      }
+      for (const role of roles) {
+        assert.equal(admin(`SELECT has_table_privilege('${role}', 'auth.users', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,TRIGGER');`, database), "f");
+        assert.equal(admin(`SELECT bool_and(
+          NOT has_column_privilege('${role}', 'auth.users', attname, 'SELECT,INSERT,UPDATE')
+          AND has_column_privilege('${role}', 'auth.users', attname, 'REFERENCES') = ('${role}' = 'bayframe_migrator' AND attname = 'id')
+        ) FROM pg_attribute WHERE attrelid='auth.users'::regclass AND attnum > 0 AND NOT attisdropped;`, database), "t");
+      }
+      const authAfter = execFileSync("docker", ["exec", container, "pg_dump", "-U", "postgres", "-d", database, "--schema=auth", "--schema-only"], { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
+      const withoutDumpNonce = (dump: string) => dump.replace(/^\\(?:un)?restrict .*$/gm, "");
+      assert.equal(withoutDumpNonce(authAfter), withoutDumpNonce(authSchema), "Application migrations changed platform auth DDL/ownership/ACLs.");
     } finally {
       await runtime.end();
     }
-    console.log("PASS: non-exposed app schema, API-role denial, runtime login/DDL/role/journal denial, default ACLs; no business tables.");
+    console.log("PASS: application tables, platform ownership, non-exposed schema, API denial, baseline runtime boundaries, auth/DDL/role/journal denial and default ACLs.");
   } finally {
     admin(`DROP DATABASE "${database}";`);
     console.log(`Removed disposable database ${database}.`);

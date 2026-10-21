@@ -39,3 +39,59 @@ h2 {
 .skip-link:focus {
   transform: translateY(0);
 }
+
+.workspace { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+.narrow { max-width: 700px; }
+.workspace nav, .actions, .page-header, .work-order > header { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.workspace nav { border-bottom: 1px solid #d6d3d1; padding-bottom: 1rem; }
+.page-header { justify-content: space-between; padding: 2rem 0; }
+.workspace h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 600; letter-spacing: -.025em; line-height: 1.15; margin: .5rem 0 1rem; }
+.workspace h2 { font-size: 1.4rem; font-weight: 600; margin: 0 0 1rem; }
+.workspace h3 { font-size: 1.15rem; font-weight: 600; }
+.workspace h4 { font-weight: 600; margin-top: 1.5rem; }
+.workspace p { line-height: 1.6; margin: .75rem 0; max-width: 75ch; }
+.workspace section { border-top: 1px solid #d6d3d1; padding: 2rem 0; }
+.eyebrow { color: #57534e; font-size: .8rem; font-weight: 600; }
+a { color: #78350f; text-underline-offset: .2em; text-decoration: underline; }
+a:hover { color: #451a03; }
+.table-scroll { max-width: 100%; overflow-x: auto; margin: 1rem 0; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
+caption { text-align: left; color: #57534e; padding: .5rem 0; }
+th, td { text-align: left; padding: .8rem .7rem; border-bottom: 1px solid #d6d3d1; vertical-align: top; }
+th { background: #f0eeeb; font-weight: 600; }
+td { min-width: 8rem; overflow-wrap: anywhere; }
+label { display: grid; gap: .35rem; font-size: .9rem; font-weight: 600; margin-bottom: .85rem; }
+input, select, textarea { font: inherit; color: #1c1917; background: white; border: 1px solid #78716c; border-radius: 3px; padding: .65rem .75rem; width: 100%; max-width: 34rem; min-width: 0; }
+input::placeholder { color: #57534e; }
+small { font-size: .8rem; font-weight: 400; color: #57534e; line-height: 1.5; }
+button { background: #292524; color: white; border: 1px solid #292524; border-radius: 3px; padding: .65rem .9rem; font: inherit; font-size: .9rem; cursor: pointer; }
+button:hover { background: #44403c; }
+button:disabled, fieldset:disabled { opacity: .65; cursor: wait; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.action-form { margin: .7rem 0; max-width: 34rem; }
+.status { display: inline-block; padding: .25rem .5rem; color: #44403c; background: #e7e5e4; border-radius: 3px; font-size: .8rem; font-weight: 600; }
+.notice, .error, .empty { padding: .8rem 1rem; margin: 1rem 0; border-left: 3px solid #78716c; background: #f0eeeb; line-height: 1.5; overflow-wrap: anywhere; }
+.error { color: #7f1d1d; background: #fef2f2; border-color: #b91c1c; }
+.notice { color: #365314; background: #f7fee7; border-color: #4d7c0f; }
+.work-order { border-bottom: 1px solid #d6d3d1; padding: 1.5rem 0; }
+.work-order > header { justify-content: space-between; }
+.task-list { list-style: none; padding: 0; }
+.task-list li { border-left: 2px solid #d6d3d1; padding: .6rem 1rem; margin: .5rem 0; }
+details { margin: 1rem 0; }
+summary { cursor: pointer; font-weight: 600; color: #78350f; padding: .4rem 0; }
+.estimate { border-left: 3px solid #a8a29e; padding: .75rem 1rem; margin: 1rem 0; }
+.estimate ul { list-style: disc; padding-left: 1.2rem; }
+.total { font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.day-filter { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem; }
+.day-filter label { margin: 0; }
+.timeline { table-layout: fixed; min-width: 1040px; }
+.timeline th:first-child { width: 160px; }
+.timeline td { padding: 0; min-width: 0; }
+.timeline-track { position: relative; min-height: 64px; }
+.timeline-hours { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(8,1fr); }
+.timeline-hours span { border-left: 1px solid #d6d3d1; }
+.reservation { position: absolute; top: 10px; min-height: 44px; display: flex; align-items: center; padding: 4px 6px; border: 1px solid #78716c; background: #e7e5e4; color: #292524; font-size: .75rem; line-height: 1.2; overflow-wrap: anywhere; }
+.reservation:hover { background: #d6d3d1; }
+.absence { color: #7c2d12; background: #ffedd5; border-color: #9a3412; }
+[id^="booking-"] { scroll-margin-top: 1rem; }
+@media (max-width: 600px) { .workspace { padding: 1.5rem 1rem 3rem; } th,td { padding: .65rem .5rem; } .page-header { padding: 1.5rem 0; } }

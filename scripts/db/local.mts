@@ -46,6 +46,17 @@ export function prepareDatabase(database: string): void {
   `, database);
 }
 
+export function prepareAuthReference(database = "postgres"): void {
+  assert.equal(admin("SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='auth.users'::regclass;", database), "supabase_auth_admin");
+  assert.equal(admin("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid='auth.users'::regclass AND contype='p';", database), "PRIMARY KEY (id)");
+  assert.equal(admin("SELECT format_type(atttypid, atttypmod) FROM pg_attribute WHERE attrelid='auth.users'::regclass AND attname='id' AND attnotnull;", database), "uuid");
+  execFileSync("docker", ["exec", "-i", container, "psql", "-X", "-U", "supabase_admin", "-d", database, "-v", "ON_ERROR_STOP=1", "-At"], {
+    input: "GRANT USAGE ON SCHEMA auth TO bayframe_migrator; GRANT REFERENCES (id) ON auth.users TO bayframe_migrator;",
+    encoding: "utf8", stdio: ["pipe", "pipe", "pipe"],
+  });
+  assert.equal(admin("SELECT has_schema_privilege('bayframe_migrator','auth','USAGE') AND has_column_privilege('bayframe_migrator','auth.users','id','REFERENCES');", database), "t");
+}
+
 export function checkRole(role: Role): void {
   assert.equal(admin(`SELECT NOT (rolsuper OR rolcreatedb OR rolcreaterole OR rolinherit OR rolreplication OR rolbypassrls) AND rolcanlogin FROM pg_roles WHERE rolname = '${role}';`), "t", `Unsafe existing role ${role}.`);
   assert.equal(admin(`SELECT count(*) FROM pg_auth_members m JOIN pg_roles r ON r.oid = m.member WHERE r.rolname = '${role}';`), "0", `Unexpected memberships for ${role}.`);
@@ -71,7 +82,8 @@ export function checkExposure(): void {
 
 export function fail(error: unknown): void {
   // Database errors may contain credentials or full SQL: print only safe codes.
-  const code = error && typeof error === "object" && "code" in error ? String(error.code) : "unknown";
+  const cause = error && typeof error === "object" && "cause" in error ? error.cause : error;
+  const code = cause && typeof cause === "object" && "code" in cause ? String(cause.code) : "unknown";
   console.error(`Local database check failed (${code}).`);
   if (error instanceof assert.AssertionError) console.error(error.message);
   process.exitCode = 1;

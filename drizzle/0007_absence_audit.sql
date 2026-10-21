@@ -1,0 +1,4 @@
+ALTER TABLE "app"."audit_events" DROP CONSTRAINT "audit_reference_check";--> statement-breakpoint
+ALTER TABLE "app"."audit_events" ADD COLUMN "resource_id" uuid;--> statement-breakpoint
+ALTER TABLE "app"."audit_events" ADD CONSTRAINT "audit_events_workshop_id_resource_id_resources_workshop_id_id_fk" FOREIGN KEY ("workshop_id","resource_id") REFERENCES "app"."resources"("workshop_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "app"."audit_events" ADD CONSTRAINT "audit_reference_check" CHECK (num_nonnulls("app"."audit_events"."booking_id","app"."audit_events"."work_order_id","app"."audit_events"."estimate_id","app"."audit_events"."resource_id") = 1);

@@ -1,6 +1,8 @@
 # Product requirements
 
-Status: draft for owner review. Updated: 20 October 2026.
+Status: local demonstration scope accepted on 21 October 2026. The resolutions
+in [workflow.md](workflow.md) supersede the earlier open policy questions below
+for this demonstration. Real workshop assumptions remain unvalidated.
 
 ## Purpose and evidence boundary
 

@@ -1,0 +1,49 @@
+name: Checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24.13.0"
+          package-manager-cache: false
+      - name: Install pinned package manager
+        run: npm install --global pnpm@11.25.0
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Start isolated local platform
+        run: pnpm exec supabase start > "$RUNNER_TEMP/supabase-start.log" 2>&1
+      - run: pnpm db:setup
+      - run: pnpm db:migrate
+      - run: pnpm db:verify
+      - run: pnpm test:integration
+      - run: pnpm auth:setup
+      - run: pnpm demo:seed
+      - name: Verify actual authentication and scoped access
+        env:
+          BAYFRAME_LIVE_TESTS: "1"
+        run: node --env-file=.env.local node_modules/vitest/vitest.mjs run src/auth/integration.test.ts
+      - run: pnpm build
+      - name: Install browser and system dependencies
+        run: pnpm exec playwright install --with-deps chrome
+      - run: pnpm test:browser
+      - name: Stop local platform
+        if: always()
+        run: pnpm exec supabase stop > "$RUNNER_TEMP/supabase-stop.log" 2>&1

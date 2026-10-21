@@ -8,11 +8,12 @@ The initial release targets one workshop.
 
 ## Current status
 
-Application foundation, 20 October 2026. A minimal Next.js application serves a
-public project-status page, with strict TypeScript, linting and a rendering smoke
-test. ADR-001 through ADR-003 are accepted. Business tables, authentication flows,
-booking features, CI and deployment have not been implemented. Local PostgreSQL
-and the application migration baseline are documented in [database setup](docs/database.md).
+Local demonstration, 21 October 2026. Staff sign-in, scoped resource access,
+appointment requests, transactional bay/technician allocation, work orders,
+immutable estimate versions and restricted customer decisions are implemented.
+ADR-001 through ADR-003 remain accepted. Local unit, database and browser evidence
+is recorded in the roadmap; prepared CI has not been run remotely.
+Local PostgreSQL and migrations are documented in [database setup](docs/database.md).
 No production-readiness or performance claims are made.
 
 The intended workflow is:
@@ -29,6 +30,7 @@ successfully confirms the booking.
 | Document | Purpose |
 | --- | --- |
 | [Roadmap](ROADMAP.md) | Milestones, local task board, acceptance evidence and next action |
+| [Demonstration guide](docs/workflow.md) | Run commands, complete journey, accepted policies, checks and limits |
 | [Stack](STACK.md) | Pinned foundation, later selections and dependency policy |
 | [Product requirements](docs/product-requirements.md) | Users, workflow, acceptance criteria, scope and open questions |
 | [Architecture](docs/architecture.md) | Application boundaries and transaction responsibilities |
@@ -71,7 +73,8 @@ The typecheck runs independently of the build; tests run once without watching.
 The rendering smoke test uses React DOM's server renderer in Node, with no DOM
 simulation. It does not prove scheduling, authentication or database behaviour.
 
-For the BF-005 local database baseline, follow [the database instructions](docs/database.md).
+For local persistence and its checks, follow [the database instructions](docs/database.md).
+For the complete application and synthetic login setup, follow [the demonstration guide](docs/workflow.md).
 Docker's Linux engine and real PostgreSQL were verified on 20 October 2026;
 engine readiness must still be checked before each database session.
 
@@ -79,7 +82,7 @@ All future public fixtures and demonstration data must be synthetic.
 
 ## Limitations
 
-Business assumptions have not been validated with garage operators. Accepted
-authentication flows and business database constraints remain unimplemented. Milestone
-dates remain planning targets. Read [the current task board](ROADMAP.md#task-board)
+Business assumptions have not been validated with garage operators. Physical bay
+occupancy beyond planned intervals, production operations and deployment remain
+unverified. Milestone dates remain planning targets. Read [the current task board](ROADMAP.md#task-board)
 for executed checks and remaining work.

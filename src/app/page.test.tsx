@@ -3,13 +3,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 import Home from "@/app/page";
 
-test("renders the public project status and its availability limits", () => {
+test("renders the local demonstration and real entry points", () => {
   const html = renderToStaticMarkup(createElement(Home));
 
   expect(html).toContain("<h1");
   expect(html).toContain("Bayframe</h1>");
   expect(html).toContain("Project status</h2>");
-  expect(html).toContain("In development");
-  expect(html).toContain("does not accept bookings or hold customer records");
-  expect(html).toContain("have not been implemented or verified");
+  expect(html).toContain("Local workshop demonstration");
+  expect(html).toContain('href="/request"');
+  expect(html).toContain('href="/login"');
+  expect(html).toContain("no live workshop service is offered");
 });

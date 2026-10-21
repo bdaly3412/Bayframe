@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Bayframe | Project status",
-  description: "Development status of Bayframe, a workshop operations and resource scheduling project.",
+  title: "Bayframe | Workshop operations",
+  description: "Local demonstration of workshop bookings, resource allocation, work orders and estimate decisions.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

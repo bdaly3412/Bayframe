@@ -1,6 +1,8 @@
 # Security model
 
-Status: design requirements, not an implemented assurance. Updated: 20 October 2026.
+Status: local identity, authorization and restricted estimate decisions implemented,
+21 October 2026. Production security is unverified. The accepted permission matrix,
+capability policy and actual limits are in [workflow.md](workflow.md#work-estimates-and-permissions).
 
 ## Trust boundaries
 
@@ -18,26 +20,27 @@ guidance. Do not treat an unverified cookie/session object as proof of identity.
 Document expiry/revocation behaviour and avoid caching personalized/session-setting
 responses across users.
 
-## Initial staff permission proposal
+## Initial staff permissions
 
 | Operation | Manager | Adviser | Technician |
 | --- | --- | --- | --- |
 | View permitted schedule | Yes | Yes | Yes, minimal necessary details |
 | Confirm booking / allocate / reschedule | Yes | Yes | No |
 | Create/issue estimate | Yes | Yes | No |
-| Update assigned work | Yes | Open decision | Assigned work only |
-| Manage staff / workshop settings | Yes | No | No |
-| View audit history | Yes | Restricted, definition pending | Restricted, definition pending |
+| Update assigned work | Yes | Yes | Assigned work only |
+| Manage staff / workshop settings | Fixture setup only | No | No |
+| View audit history | Yes | No | No |
 
-Default deny unspecified actions. Define permissions for cancellations, estimate
-corrections and work-order closing before those mutations are implemented.
+Default deny unspecified actions. Managers/advisers cancel, reschedule, revise
+estimates and close work. Only managers record resource absences. Staff/resource
+administration currently uses synthetic local setup; no management UI is claimed.
 Customer capability access never grants staff permissions.
 
 ## Database access
 
-Proposed business access is server-only Drizzle through an explicitly scoped
-runtime role, separate from migration administration and limited to required
-operations. The final role grants are an implementation decision; do not use
+Business access is server-only Drizzle through a dedicated runtime role,
+separate from migration administration. Reviewed migrations grant only the needed
+SELECT/INSERT and column-level UPDATE privileges, with no DELETE/TRUNCATE. Do not use
 superuser/BYPASSRLS casually or claim direct queries inherit a user's auth context.
 
 Business tables should not be reachable through an unintended Supabase Data API
@@ -45,6 +48,14 @@ path. Decide schema exposure and grants explicitly. If tables are exposed, enabl
 RLS with tested policies appropriate to that path. Verify actual grants, roles
 and both allowed/denied queries; application checks alone do not secure an
 accidentally public alternate interface.
+
+Verified local boundary: `app` is absent from API exposure and API roles have no
+schema/table privileges. Runtime cannot write business data, read auth identities
+or the migration journal, perform DDL or assume migration privileges. The migrator
+has only auth schema USAGE and REFERENCES on `auth.users.id`, with no auth DML.
+Supabase retains auth object ownership. See [database verification](database.md).
+No user-JWT RLS context or workshop authorization is supplied by these connections;
+verified sessions and scoped application membership enforce workshop access.
 
 ## Customer requests and approval links
 
@@ -60,7 +71,7 @@ reject contradictory replays and invalid/superseded versions.
 Opening a link must not approve work; require an explicit state-changing action
 with the applicable CSRF/origin protection. Prevent token leakage through logs,
 analytics and referrers; avoid third-party content on the approval page. Link
-delivery and authorized-recipient rules remain open. Do not send real messages
+delivery is manual to the booking contact in this demo. Do not send real messages
 without explicit authorization.
 
 ## Secrets and personal data
@@ -81,6 +92,12 @@ technician requests at server boundaries, including direct invocation. Test
 alternate database/API exposure and invalid, expired, replayed and superseded
 customer capabilities. Verify no secrets enter bundles or reports. A passing
 happy-path login test is not a security review.
+
+The local staff path uses `getUser()` verification and current active scoped
+membership, including transaction-time checks. Proxy refresh propagates cookies
+and private/no-store headers. Public signup is denied while password login stays
+enabled. Logout clears the local browser session; immediate cross-device token
+invalidation is not claimed. API roles remain denied the non-exposed app schema.
 
 Deployment also requires review of rate limits, HTTPS/cookies, dependency
 versions, connection privileges, backup/recovery and safe monitoring. None is

@@ -1,7 +1,7 @@
 # Architecture
 
-Status: ADR-001 through ADR-003 accepted; application and local database
-foundations implemented. Updated: 20 October 2026.
+Status: ADR-001 through ADR-003 accepted; local end-to-end workflow implemented.
+Updated: 21 October 2026. See [demonstration rules and limits](workflow.md).
 
 ## Shape
 
@@ -94,7 +94,10 @@ and unit-test baseline. BF-005 creates local infrastructure/migrations; BF-006
 introduces workshop, staff and resource tables; BF-007 adds the first protected
 resource read. Booking/allocation schema and services belong to BF-009.
 
-No deployment, background workers or separate services exist. Release review must
+The runtime is a five-connection `pg` pool with Drizzle transactions. The same
+transaction owns actor checks, booking/work-order locks, scoped writes and audit.
+Custom migrations enforce allocation exclusion/pair consistency and immutable
+issued estimates. No deployment, background workers or separate services exist. Release review must
 cover migration permissions, secrets, connection limits, rollback/recovery and
 test isolation before any approved deployment.
 

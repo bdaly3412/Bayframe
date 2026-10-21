@@ -1,7 +1,9 @@
 # Local database and migrations
 
-BF-005 establishes infrastructure only. There are no business tables or runtime
-application queries. Accepted boundaries are in [ADR-002](adr/002-postgresql-scheduling.md)
+BF-005 established infrastructure and BF-006 added workshop, staff and resources.
+The local workflow now uses eight migrations, 14 tables and scoped runtime services.
+See [the demonstration guide](workflow.md) for application/auth setup and checks.
+Accepted boundaries are in [ADR-002](adr/002-postgresql-scheduling.md)
 and [ADR-003](adr/003-authentication.md).
 
 ## Setup (PowerShell, repository root)
@@ -57,10 +59,20 @@ are failures; preserve the file and volume together. Do not delete either as a
 recovery shortcut. Restrict local file access; POSIX file modes do not establish
 Windows ACL protection.
 
+BF-006 setup validates the actual `auth.users.id` UUID primary key and its
+`supabase_auth_admin` owner. Using the fixed container's platform-administrator
+socket, it grants the migrator auth schema USAGE and column-level REFERENCES on
+that ID only. Ordinary `postgres` cannot grant that schema permission on this
+image. No auth SELECT or write privilege, ownership change or role membership is
+granted to application roles. Run setup before the new migrations, including on
+an existing BF-005 stack. Setup does not migrate business tables.
+
 The connection target is deliberately fixed: `127.0.0.1:55422`, database
 `postgres`, project container `supabase_db_bayframe-local`. No connection strings
 or public environment variables are needed. Administrative setup does not use
-the runtime credentials. No runtime client is imported by the application yet.
+the runtime credentials. The application uses a five-connection runtime pool at
+this fixed endpoint. Recognized disposable verification database names are the
+only alternative database targets; no hosted connection setting is accepted.
 
 ## Ownership and privileges
 
@@ -77,8 +89,8 @@ do not apply application SQL by hand outside its migration history.
 | Role | Privileges |
 | --- | --- |
 | Local administrator | Creates logins, database grants and disposable verification databases through the fixed container |
-| `bayframe_migrator` | Owns `app` and the migration journal; database CREATE permits migration schemas/trusted extensions; no superuser, role/database creation, replication, memberships or RLS bypass |
-| `bayframe_runtime` | CONNECT and USAGE on `app`; no business DML until explicitly granted by a later migration; no schema/table/temp DDL, migration-journal access, memberships or RLS bypass |
+| `bayframe_migrator` | Owns `app` and the migration journal; database CREATE permits migration schemas/trusted extensions; auth USAGE and REFERENCES on `auth.users.id` only; no auth DML, superuser, role/database creation, replication, memberships or RLS bypass |
+| `bayframe_runtime` | CONNECT/USAGE, scoped application SELECT/INSERT and required column-level UPDATE only; no DELETE/TRUNCATE, auth access, schema/table/temp DDL, journal access, memberships or RLS bypass |
 | API roles | No `app` schema privileges, including `anon`, `authenticated` and `service_role` |
 
 The API exposes only `public` and `graphql_public`, with no `app` search-path
@@ -89,6 +101,19 @@ the migrator. There is no automatic blanket runtime DML grant. Grant only needed
 operations in the migration that introduces each real table. Direct `pg` queries
 do not carry an end-user JWT; later application authorization remains required.
 Private-schema RLS has not been introduced.
+
+BF-006 adds a timezone validation function followed by the three business tables
+and an explicit runtime SELECT grant. The generated table migration includes
+reviewed ACL SQL; snapshots describe application tables only, with an external
+reference to platform-owned `auth.users`, never its creation or alteration.
+The auth foreign key and operational references use RESTRICT; active flags
+preserve retired staff/resources. See [persisted rules](data-model.md#bf-006-persisted-rules).
+Later migrations add booking/allocation, work, estimates, decisions, absence and
+audit tables, reviewed exclusion/deferred pair checks, immutable issued snapshots
+and narrow write privileges. Row locks require UPDATE permission on PostgreSQL:
+runtime receives UPDATE(id) on staff/resources, with triggers rejecting identity
+changes. It still cannot edit role, activity or ownership. Audit/decision rows are
+insert-only; allocation history can only acquire a release timestamp.
 
 ## Reproducible real-database check
 
@@ -104,19 +129,37 @@ pnpm build
 
 `db:verify` requires a healthy initialized project and creates a new random
 `bf_verify_<hex>` database from `template0` on its PostgreSQL instance. It checks
-the absence of application/journal/auth schemas before migration, applies the
-actual Drizzle SQL, compares file hashes with the journal, applies it again and
-asserts an unchanged journal. It prints actual PostgreSQL and extension versions.
+the absence of application/journal/auth schemas, then restores a schema-only
+dump of the actual local Supabase auth schema, including ownership and ACLs,
+through the fixed platform administrator. No identities or platform data are
+copied. It grants the narrow auth reference prerequisite, applies the actual
+Drizzle SQL, compares file hashes with the journal, applies it again and asserts
+an unchanged journal. It prints actual PostgreSQL and extension versions.
 It checks schema ownership/API-role privileges, actual runtime login and denied
 DDL/role escalation/journal reads. Transactional synthetic probes check default
-table/function privileges and are rolled back. There are no business fixtures.
+table/function privileges and are rolled back. Synthetic fixtures in the
+disposable database cover workshops, all three staff roles, multi-workshop
+memberships, linked/unlinked technicians, bays, generated IDs/defaults and
+deactivation. Twenty-six invalid value/relationship/uniqueness/deletion cases
+include cross-workshop inserts/updates, duplicate memberships/names/staff links,
+invalid roles/types/timezones and referenced auth/workshop/staff deletion.
+Auth deletion is tested as the platform table owner. The check compares auth
+DDL/ownership/ACL dumps after application migrations with the source definition
+(ignoring only pg_dump's random restrict nonce).
+
+The baseline check confirms reads of the three foundation tables and denies writes
+to workshop values, staff activity and resource deletion, as well as
+TRUNCATE, auth/journal access, timezone-function execution, DDL and role escalation.
+API table/schema denial and no auth DML for either application login are checked.
+Database grants do not establish per-user scope. Verified sessions, active scoped
+membership and service authorization protect application reads and mutations.
 
 The check closes its connections and drops only the database it created, without
 forced disconnections. It does not reset any database or volume. Interrupted
 processes can leave a named disposable database; inspect it before any separately
 approved manual cleanup. It must never fall back to testing against `postgres`.
 
-Expected migration output: one applied migration, second run zero pending and
+Expected migration output: eight applied migrations, second run zero pending and
 unchanged journal. Expected generation output: no schema changes. Tests run once.
 Stop on a failure; do not treat a skipped database check as a pass.
 

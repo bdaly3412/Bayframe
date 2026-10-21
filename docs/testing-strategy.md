@@ -1,6 +1,7 @@
 # Testing and evidence strategy
 
-Status: planned; no test suite exists. Updated: 20 October 2026.
+Status: unit, real PostgreSQL, actual Auth and browser suites implemented.
+Updated: 21 October 2026. Executed evidence is owned by [ROADMAP.md](../ROADMAP.md).
 
 ## Principles
 
@@ -40,7 +41,8 @@ the intended contention behaviour. Assert final state as well as responses.
 
 After deterministic two-connection tests, submit 100 valid competing requests for
 one resource/interval on a clean fixture. In a healthy successful run, expect one
-success, 99 controlled conflicts, zero unexpected errors and one active allocation.
+success, 99 controlled conflicts, zero unexpected errors and one active allocation
+per contested resource (two rows for the required bay/technician pair).
 The safety invariant remains at most one allocation even under failures, but
 zero successes is not evidence that the intended workflow succeeded.
 
@@ -86,6 +88,8 @@ selected version. Remote CI is only verified after an actual run is inspected.
 
 ## Current execution record
 
-No application, migration, integration, browser or benchmark checks have run.
-Documentation checks for the foundation are recorded in [ROADMAP.md](../ROADMAP.md).
-Runnable package commands will be documented only after bootstrap establishes them.
+Run commands and isolation rules are in [workflow.md](workflow.md#checks-and-limits).
+Database tests use disposable PostgreSQL databases; browser tests use only local
+synthetic demonstration records. A 100-attempt correctness diagnostic is part of
+the integration suite, with pool max five; it is not a throughput benchmark.
+CI is prepared; remote execution remains unverified.

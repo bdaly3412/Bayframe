@@ -1,7 +1,6 @@
 # Technology stack
 
-Status: foundation pinned and ADR-001 through ADR-003 accepted, 20 October 2026.
-Later-stage tools remain uninstalled except the BF-005 database baseline below.
+Status: local demonstration pinned, ADR-001 through ADR-003 accepted, 21 October 2026.
 This file owns tool selection; ADRs own the reasons for major choices.
 
 | Area | Choice / selection status | Introduction point |
@@ -12,12 +11,12 @@ This file owns tool selection; ADRs own the reasons for major choices.
 | Styling | Tailwind CSS / PostCSS plugin 4.3.3, PostCSS 8.5.31 | BF-003; application-owned markup |
 | Database | PostgreSQL 17.11; btree_gist 1.7 | BF-005; local Supabase image 17.11.0.004 |
 | Persistence | Drizzle ORM 0.45.4, Kit 0.31.11, pg / @types/pg 8.23.1 | BF-005; versioned custom SQL baseline |
-| Authentication | Supabase Auth | First staff access path; ADR-003 |
-| Boundary validation | Zod | First external-input boundary |
-| Unit/integration tests | Vitest 5.0.5, Vite 7.3.7; real PostgreSQL assert checks | BF-003 rendering test; BF-004 intervals; BF-005 migration/privilege checks |
+| Authentication | Supabase Auth, @supabase/ssr 0.12.7, @supabase/supabase-js 2.118.0, server-only 0.0.1 | BF-007; verified identity, refresh and scoped membership |
+| Boundary validation | Zod 4.6.7 | BF-007 onward; server input validation |
+| Unit/integration tests | Vitest 5.0.5, Vite 7.3.7; real PostgreSQL assert checks | BF-003 rendering test; BF-004 intervals; BF-005 migration/privileges; BF-006 persistence/integrity |
 | Linting | ESLint 9.39.4, eslint-config-next 16.4.2 | BF-003; Core Web Vitals and TypeScript rules |
-| Browser tests | Playwright | First end-to-end workflow |
-| CI | GitHub Actions | Once local checks are reproducible |
+| Browser tests | @playwright/test 1.64.1, installed Chrome | BF-011 synthetic journey and permission checks |
+| CI | GitHub Actions; SHA-pinned official actions | BF-008/011 workflow prepared; remote run unverified |
 | Local infrastructure | Docker Linux engine and project-local Supabase CLI 2.121.0 | BF-005; dedicated project/ports; requested loopback binding ineffective on this host |
 | Logging | Structured server logs | First server workflow |
 | Error monitoring | Sentry if justified | Release review; no provisioning authorized |

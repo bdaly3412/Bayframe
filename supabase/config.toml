@@ -35,7 +35,12 @@ enabled = false
 
 [auth]
 enabled = true
+enable_signup = false
 site_url = "http://127.0.0.1:3000"
+
+[auth.email]
+# Keep email/password enabled; the global signup switch denies registration.
+enable_signup = true
 
 [edge_runtime]
 enabled = false
