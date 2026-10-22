@@ -4,7 +4,7 @@ Updated: 22 October 2026.
 
 ## Current state
 
-This phase began from clean `main` at `46cdb89`, including the completed BF-013 frontend. BF-014 audits and verifies the complete accepted local backend, fixes estimate-history navigation, controls absence conflicts, validates dedicated runtime credentials and handles idle connection failures. All twelve MVP workflows have current evidence in the [backend requirement matrix](docs/backend-coverage.md). ADR-001 through ADR-003 and accepted workflow policies remain unchanged. BF-014 changes are unstaged for owner review; no repository history, remote state or deployment was changed. Earlier phase evidence below is historical.
+BF-014 began from clean `main` at `46cdb89`, including the completed BF-013 frontend, and was committed by the owner as `af52dbc10c20054986044b2c9457fd678cc70b89` (`fix: complete backend verification and workflow error handling`). The commit is `HEAD` and matches `origin/main`; its 20 paths include the requirement matrix, backend fixes and verification. The 22 October owner review accepted BF-014's local technical evidence, with this roadmap reconciliation as the remaining documentation action. ADR-001 through ADR-003 and accepted workflow policies remain unchanged. Earlier phase evidence below is historical.
 
 The initial planning window is 20 October–16 November 2026, with a provisional
 72–100 focused-hour budget. Re-estimate after the first working database and
@@ -23,9 +23,9 @@ Actual active time has not been recorded for BF-002 through BF-013.
 These are targets. A live deployment requires separate approval. Reduce interface
 scope or move dates if core allocation correctness is not proven.
 
-The remaining local implementation was approved as one coherent scope with
-checks and review throughout. Manual review/commit is the next boundary;
-remote CI execution and deployment are not implied by local completion.
+The approved local implementation and owner commit are complete. Remote CI,
+release preparation and deployment remain separate; none follows from local
+completion.
 
 ## Task board
 
@@ -49,7 +49,9 @@ deliverable.
 | BF-011 / Review | Demonstration and release review; present reproducible evidence | BF-010; accepted timeline addition | Actual not recorded / Engineering | Browser journey, resource timeline and responsive review; local release boundary documented; no deployment or remote CI claim |
 | BF-012 / Done | Complete prototype acceptance and launch local preview | Committed baseline `bc34cce`; owner continuation | Actual not recorded / Engineering | Owner committed as `d621fe2`; 56 unit tests, 10 PostgreSQL cases, 11 live auth cases, two browser journeys and required gates passed; revised scope/task audit/same-tab link regressions covered |
 | BF-013 / Review | Redesign the complete frontend around schedule and job sheets | Committed prototype `d621fe2`; approved redesign scope | Actual active time not recorded / Engineering, owner review | 60 unit, 10 PostgreSQL, 11 live auth and 18 browser tests; lint, standalone typecheck, build, migrations, responsive/error evidence and final correction review pass |
-| BF-014 / Review | Complete and verify the accepted backend with supported frontend workflows | Clean `main` at `46cdb89`; complete backend phase authorized | Actual active time not recorded / Engineering, owner review | Requirement matrix, runtime fixes, direct-action tests, coordinated database races/rollback/recovery, live refresh and browser integration; current results below |
+| BF-014 / Done | Complete and verify the accepted backend with supported frontend workflows | Clean `main` at `46cdb89`; complete backend phase authorized | Actual active time not recorded / Engineering; owner review 22 October | Owner accepted local technical evidence; committed as `af52dbc`; matrix and executed checks below; BF-015 corrects stale closeout status |
+| BF-015 / Done | Reconcile BF-014 closeout and record the next-stage decision package | BF-014 owner review and committed evidence | Actual active time not recorded / Engineering, owner review | Git, service and policy evidence reconciled in this roadmap; no matrix inconsistency found; recommends a bounded local exposure decision before any shared demo |
+| BF-016 / Review | Assess local-demo service exposure without configuration changes | Owner authorized read-only host-scoped assessment; BF-015 evidence | Actual active time not recorded / Engineering, owner review | Local non-loopback TCP access demonstrated; firewall evidence and limits below; owner-only isolation remains unproved pending separately authorized containment |
 
 BF-003 through BF-008 total roughly 14–21 hours before contingency and ADR work.
 These are planning estimates, not measured execution times or guarantees.
@@ -116,11 +118,12 @@ retains the complete workflow and includes both a resource timeline and table.
 
 ## Next action
 
-Owner reviews BF-014 against the [backend matrix](docs/backend-coverage.md) and
-the local application, then manually stages the explicit changed public paths,
-inspects the staged diff and commits if accepted. BF-013 is already in the
-`46cdb89` baseline and does not need staging again. Suggested commit message:
-`fix: complete backend verification and workflow error handling`.
+Owner reviews BF-016's exposure evidence below. Owner-only local review is not
+adequately bounded: database and gateway connections succeeded from this host
+through its own non-loopback addresses, while off-host reachability remains
+unknown. Authorize a separate BF-017 containment proposal before approving any
+configuration change. Do not share the demo over a network. Remote CI, release
+preparation and production work remain separate decisions.
 
 Run instructions, synthetic login location and stop conditions are in
 [workflow.md](docs/workflow.md). Local services are running for review with data
@@ -206,11 +209,150 @@ backup/recovery, stricter revocation, network isolation, remote CI/deployment an
 real workshop validation remain unverified and require their own decisions.
 Docker's platform port exposure remains an existing local risk. The existing
 interface prerelease dependency was not changed. No dependency, architecture,
-business policy, migration, Git history or remote state changed.
+business policy or migration changed in BF-014. The owner subsequently recorded
+the completed phase in commit `af52dbc`; no remote state changed.
 
-Next action: owner review and manual explicit-path commit if accepted. The local
-production application is available at `http://127.0.0.1:3000` for that review;
-synthetic credentials remain in ignored `output/demo-credentials.txt`.
+Owner review on 22 October accepted this local technical evidence. The owner
+committed the phase as `af52dbc10c20054986044b2c9457fd678cc70b89`; the verified
+working tree is clean and `HEAD` equals `origin/main`. The prior closeout wording
+that said BF-014 was unstaged and history unchanged described the pre-commit
+state and is superseded. No remote mutation or deployment was made during this
+review. The local app currently returns HTTP 200 at `127.0.0.1:3000`; Auth health
+returns HTTP 200 and PostgreSQL accepts connections. Bayframe's Docker database
+port 55422 and gateway port 55421 currently publish on `0.0.0.0` and `::`.
+Local owner review is reachable; service isolation and shared-LAN demo safety
+are not established. Synthetic credentials remain in ignored
+`output/demo-credentials.txt`.
+
+## BF-015 closeout and next-stage decision package
+
+### Verified facts
+
+- `HEAD` and `origin/main` are `af52dbc10c20054986044b2c9457fd678cc70b89`;
+  the commit has 20 changed paths and one parent (`46cdb89`). The index and
+  working tree were clean at review. The completed BF-013 frontend is part of
+  the parent baseline.
+- The owner accepted BF-014's local technical evidence on 22 October. This
+  roadmap records the closeout reconciliation; no test suite was rerun for BF-015.
+- The [requirement matrix](docs/backend-coverage.md) and accepted
+  [workflow policy](docs/workflow.md) agree that estimate authoring creates one
+  line in the current UI while the service accepts 1–50 lines. The UI limitation
+  is explicit; it is not an accepted-requirement gap. Review against
+  [ADR-001](docs/adr/001-modular-monolith.md),
+  [ADR-002](docs/adr/002-postgresql-scheduling.md), and
+  [ADR-003](docs/adr/003-authentication.md) found no other factual matrix
+  inconsistency. No accepted requirement was broadened.
+- At review, the app returned HTTP 200 on loopback port 3000, Auth health
+  returned HTTP 200, and PostgreSQL accepted connections. Docker published
+  Bayframe database port 55422 and gateway port 55421 on `0.0.0.0` and `::`.
+  These are point-in-time local checks, not network-isolation evidence.
+
+### Readiness distinctions
+
+| Area | Evidence-based status | Boundary |
+| --- | --- | --- |
+| Local demo | The documented synthetic one-workshop journey is implemented; app and local dependencies currently answer checks. The app is reachable for on-host owner review; overall environment safety remains conditional on the published service ports. | Do not share the demo over a network until service reachability/exposure is resolved. No real workshop or customer validation. |
+| Release preparation | Not complete or authorized. Local build and test evidence exists in BF-014; remote CI, packaged-artifact review and release operations were not verified here. | A separate bounded release-preparation task and owner decision are required. |
+| Production | Readiness is not demonstrated. TLS/cookies, abuse controls, backups/recovery, monitoring, isolation, operational ownership and real-world validation remain unverified or excluded. | No deployment, provisioning or production-readiness claim. |
+
+### BF-016 assessment scope (subsequently authorized)
+
+Authorize one read-only, host-scoped assessment to determine whether the
+currently published database and gateway ports are reachable beyond loopback,
+using local listener/firewall evidence and a controlled reachability check where
+available. Do not change firewall, Docker, service or application configuration
+within that assessment. Acceptance: record the observed bindings, tested
+reachability and limits; conclude either that the owner-only local demo boundary
+is evidenced or that it remains blocked pending a separately authorized
+containment change. Stop if the check would require a remote host, network
+change, credential disclosure, data reset or production/release action. This is
+a proposal that the owner subsequently authorized for BF-016. That authorization
+does not accept an architecture or configuration change.
+
+## BF-016 local-demo exposure evidence — 22 October 2026
+
+Owner authorized a read-only assessment of the current host. Observations were
+taken approximately 01:39–01:41 Europe/London; they are a local snapshot, not a
+durable network guarantee. The pre-existing BF-015 roadmap edits were preserved.
+
+### Observed bindings and connections
+
+`docker ps`, selected port fields from `docker inspect`, and Windows
+`Get-NetTCPConnection -State Listen` showed:
+
+- Database: host port 55422 maps to container port 5432 on `0.0.0.0` and `::`.
+- Gateway: host port 55421 maps to container port 8000 on `0.0.0.0` and `::`.
+- Both container host-port requests have an empty HostIp. The Docker network
+  option still requests `host_binding_ipv4=127.0.0.1`; the actual published
+  bindings above take precedence as evidence. Container-network IPv6 is disabled,
+  which does not prevent the observed IPv6 host publication.
+- Windows has `::` listeners for both platform ports owned by Docker's backend
+  and additional `::1` listeners owned by the WSL relay. The application has an
+  IPv4 loopback listener at `127.0.0.1:3000`, owned by its Node process.
+
+Controlled TCP checks used this host as both source and destination, with a
+1.5-second wait per connection and each socket disposed after the attempt:
+
+| Destination on this host | App 3000 | Gateway 55421 | Database 55422 |
+| --- | --- | --- | --- |
+| IPv4 loopback `127.0.0.1` | Connected | Connected | Connected |
+| IPv6 loopback `::1` | Timed out | Connected | Connected |
+| Current LAN IPv4 address | Timed out | Connected | Connected |
+| Current virtual-adapter IPv4 address | Timed out | Connected | Connected |
+
+These checks demonstrate TCP acceptance through local non-loopback addresses;
+they do not establish access from another machine, successful authentication,
+data access or an external firewall traversal. Timeouts do not identify their
+cause. No remote host or non-loopback IPv6 destination was tested.
+`docker exec supabase_db_bayframe-local pg_isready -q` returned exit 0, proving
+PostgreSQL readiness inside its container, separately from the TCP checks.
+
+### Host firewall evidence and limits
+
+`Get-NetConnectionProfile` reported the Internet-connected interface as Public
+and another interface as Private with no traffic. `Get-NetFirewallProfile
+-PolicyStore ActiveStore` reported all three profiles enabled, default inbound
+Block, default outbound Allow, and inbound/local rules allowed. The Windows
+firewall service was running.
+
+Queried 371 enabled inbound ActiveStore rules and inspected associated port,
+application, service, address and interface filters for TCP/Any rules relevant
+to these ports, Docker/WSL/Node programs or broad port/program/service matches.
+The Docker backend has an enforced Public-profile TCP block rule covering any
+local/remote port and address, on any interface. A Public-profile Node TCP allow
+rule points to a different executable path from the current application process.
+Other broad-looking application/capability rules were not treated as universal
+allow rules or proof of an effective packet decision.
+
+The default and Docker block rule are evidence of filtering, not demonstrated
+off-host isolation. No remote packet test, packet trace, router/NAT review,
+complete Windows Filtering Platform/Hyper-V policy audit, IPv6 ingress test or
+independent-host check was performed. Self-connections cannot validate those
+paths. Docker's [port-publication documentation](https://docs.docker.com/engine/network/port-publishing/)
+distinguishes default publication from explicit loopback publication; Microsoft's
+[firewall-rule documentation](https://learn.microsoft.com/en-us/powershell/module/netsecurity/get-netfirewallrule?view=windowsserver2025-ps)
+explains why the associated filters must also be inspected.
+
+### Assessment and owner decision
+
+**Assessment complete; owner-only isolation is not established.** The current
+environment is not adequately bounded for an owner-only demo claim. Local
+non-loopback access is demonstrated; off-host reachability is unknown, rather
+than proved open or closed. The Public firewall block reduces the apparent
+ingress risk but does not establish an invariant loopback boundary. Keep shared
+demo approval blocked pending separately authorized containment and verification.
+
+Next action: owner reviews this assessment and decides whether to authorize
+BF-017 to prepare one bounded containment proposal, including its concrete
+change, rollback and local acceptance checks. Implementation needs separate
+approval; no architecture or accepted policy changed here.
+
+No firewall, network, Docker, service or application configuration was changed;
+services and data were preserved. No credentials or response bodies were read
+or printed. Application suites and fresh HTTP status checks were not completed;
+the earlier HTTP 200 observations remain historical. No Git mutation, remote
+probe, release, deployment or production action occurred. `ROADMAP.md` is the
+only repository file changed for this assessment.
 
 ## BF-013 frontend redesign and evidence
 
