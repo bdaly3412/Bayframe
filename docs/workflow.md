@@ -7,22 +7,28 @@ on 21 October 2026 and resolve the earlier open MVP policy questions.
 ## Run it (PowerShell, repository root)
 
 Use Node.js 24.13.0, pnpm 11.25.0 and Docker's Linux engine. Follow the network
-exposure checks in [database setup](database.md) before starting local services.
-Preserve the existing local environment and database volume together.
+checks and one-time import in [database setup](database.md) before starting local
+services. Preserve the existing local environment, private `.auth/local-stack/`,
+demo credentials and database volume together. For an existing demonstration:
 
 ```powershell
 pnpm install --frozen-lockfile
 pnpm db:start
-pnpm db:setup
-pnpm db:migrate
-pnpm auth:setup
-pnpm demo:seed
+pnpm db:check
 pnpm build
-pnpm start --hostname 127.0.0.1 --port 3000
+pnpm start --port 3000
 ```
 
-Stop on any failed command. Auth setup copies only the running local project's
-keys into ignored `.env.local`, preserving matching values and refusing mismatches.
+Stop on any failed command. Startup requires actual IPv4/IPv6 loopback platform
+publications, preserved imported configuration, PostgreSQL readiness and Auth
+health. The app explicitly binds IPv4 loopback. No reseed, migration or role setup
+is required for an ordinary restart.
+
+For first application setup on a new disposable environment only, run `db:setup`,
+`db:migrate`, `auth:setup` and `demo:seed` after platform import/start. Auth setup
+copies the imported local project's keys into ignored `.env.local`, preserving
+matching values and refusing mismatches; startup independently compares the actual
+service configuration with its preserved import.
 The administrative key is used only by the local fixture script; application
 access uses the publishable key and the separate unprivileged database login.
 Never print or publish the environment file or service status output.
@@ -166,9 +172,10 @@ pre-existing database deletion is used. Browser screenshots/results stay in igno
 the local gates, actual auth checks and browser journey. A prepared workflow is
 not a verified remote CI run. No deployment, production TLS/cookies, rate limiting,
 backup/recovery, real operator validation or real-customer readiness is claimed.
-Docker still publishes local platform ports on all interfaces on the tested host;
-network isolation remains unproved. Stop local services with `pnpm db:stop` when
-finished, preserving volumes.
+BF-017 verifies explicit loopback publication and local non-loopback denial on
+the tested host. No off-host isolation test or remote guarantee is claimed.
+Stop the app with Ctrl+C and local platform with `pnpm db:stop` when finished,
+preserving volumes and private configuration.
 
 The [backend requirement matrix](backend-coverage.md) maps accepted requirements
 to entry points, services, database rules, current tests and explicit exclusions.

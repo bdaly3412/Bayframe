@@ -67,12 +67,14 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm start --hostname 127.0.0.1
+pnpm start
 ```
 
 Expected versions: `11.25.0` and `v24.13.0`. Stop on a version mismatch or failed
 command. Open [the local page](http://127.0.0.1:3000) after starting the server;
-stop it with Ctrl+C. For development, use `pnpm dev --hostname 127.0.0.1` instead.
+stop it with Ctrl+C. For development, use `pnpm dev` instead. Both commands check
+the contained local platform before starting and bind the application to
+`127.0.0.1`; complete the database setup below first.
 The typecheck runs independently of the build; tests run once without watching.
 The rendering smoke test uses React DOM's server renderer in Node, with no DOM
 simulation. It does not prove scheduling, authentication or database behaviour.

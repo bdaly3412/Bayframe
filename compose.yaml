@@ -1,0 +1,38 @@
+name: bayframe-contained
+
+services:
+  db:
+    extends: { file: .auth/local-stack/services.json, service: db }
+    image: public.ecr.aws/supabase/postgres:17.11.0.004
+    ports:
+      - "127.0.0.1:55422:5432"
+      - "[::1]:55422:5432"
+  auth:
+    extends: { file: .auth/local-stack/services.json, service: auth }
+    image: public.ecr.aws/supabase/gotrue:v2.197.0
+    depends_on:
+      db: { condition: service_healthy }
+  rest:
+    extends: { file: .auth/local-stack/services.json, service: rest }
+    image: public.ecr.aws/supabase/postgrest:v16.4
+    depends_on:
+      db: { condition: service_healthy }
+  kong:
+    extends: { file: .auth/local-stack/services.json, service: kong }
+    image: public.ecr.aws/supabase/kong:2.8.1
+    depends_on:
+      auth: { condition: service_healthy }
+      rest: { condition: service_started }
+    ports:
+      - "127.0.0.1:55421:8000"
+      - "[::1]:55421:8000"
+
+volumes:
+  database:
+    external: true
+    name: supabase_db_bayframe-local
+
+networks:
+  default:
+    external: true
+    name: supabase_network_bayframe-local

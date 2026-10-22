@@ -24,7 +24,7 @@ export default defineConfig({
     video: "off",
   },
   webServer: {
-    command: "pnpm start --hostname 127.0.0.1 --port 3000",
+    command: "pnpm start --port 3000",
     url: "http://127.0.0.1:3000",
     reuseExistingServer: process.env.BAYFRAME_REUSE_SERVER === "1",
     timeout: 60000,

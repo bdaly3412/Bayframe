@@ -28,8 +28,10 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
-      - name: Start isolated local platform
+      - name: Initialize disposable runner platform for import
         run: pnpm exec supabase start > "$RUNNER_TEMP/supabase-start.log" 2>&1
+      - run: pnpm db:adopt
+      - run: pnpm db:start
       - run: pnpm db:setup
       - run: pnpm db:migrate
       - run: pnpm db:verify
@@ -46,4 +48,4 @@ jobs:
       - run: pnpm test:browser
       - name: Stop local platform
         if: always()
-        run: pnpm exec supabase stop > "$RUNNER_TEMP/supabase-stop.log" 2>&1
+        run: pnpm db:stop

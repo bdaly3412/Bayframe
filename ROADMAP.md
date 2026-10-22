@@ -4,7 +4,7 @@ Updated: 22 October 2026.
 
 ## Current state
 
-BF-014 began from clean `main` at `46cdb89`, including the completed BF-013 frontend, and was committed by the owner as `af52dbc10c20054986044b2c9457fd678cc70b89` (`fix: complete backend verification and workflow error handling`). The commit is `HEAD` and matches `origin/main`; its 20 paths include the requirement matrix, backend fixes and verification. The 22 October owner review accepted BF-014's local technical evidence, with this roadmap reconciliation as the remaining documentation action. ADR-001 through ADR-003 and accepted workflow policies remain unchanged. Earlier phase evidence below is historical.
+BF-014 began from clean `main` at `46cdb89`, including the completed BF-013 frontend, and was committed by the owner as `af52dbc10c20054986044b2c9457fd678cc70b89` (`fix: complete backend verification and workflow error handling`). Its 20 paths include the requirement matrix, backend fixes and verification. BF-015/BF-016 documentation is committed in current `HEAD` `3e3ed4e`. BF-017 began with a clean working tree and empty index. The owner approved replacing local CLI orchestration with Compose; that implementation now passes local containment, health, authentication, browser and restart checks while preserving existing data and credentials. Changes await owner review and manual commit. ADR-001 through ADR-003 and accepted workflow policies remain unchanged. Earlier phase evidence below is historical.
 
 The initial planning window is 20 October–16 November 2026, with a provisional
 72–100 focused-hour budget. Re-estimate after the first working database and
@@ -52,6 +52,7 @@ deliverable.
 | BF-014 / Done | Complete and verify the accepted backend with supported frontend workflows | Clean `main` at `46cdb89`; complete backend phase authorized | Actual active time not recorded / Engineering; owner review 22 October | Owner accepted local technical evidence; committed as `af52dbc`; matrix and executed checks below; BF-015 corrects stale closeout status |
 | BF-015 / Done | Reconcile BF-014 closeout and record the next-stage decision package | BF-014 owner review and committed evidence | Actual active time not recorded / Engineering, owner review | Git, service and policy evidence reconciled in this roadmap; no matrix inconsistency found; recommends a bounded local exposure decision before any shared demo |
 | BF-016 / Review | Assess local-demo service exposure without configuration changes | Owner authorized read-only host-scoped assessment; BF-015 evidence | Actual active time not recorded / Engineering, owner review | Local non-loopback TCP access demonstrated; firewall evidence and limits below; owner-only isolation remains unproved pending separately authorized containment |
+| BF-017 / Review | Contain and reproduce the local demonstration while preserving data | Entire bounded phase and subsequent Compose replacement explicitly approved | Actual active time not recorded / Engineering, owner review | Explicit dual-loopback database/gateway publication; host-origin non-loopback denial; data/credential continuity; guarded startup and controlled stop/start verified; executed checks below |
 
 BF-003 through BF-008 total roughly 14–21 hours before contingency and ADR work.
 These are planning estimates, not measured execution times or guarantees.
@@ -118,16 +119,17 @@ retains the complete workflow and includes both a resource timeline and table.
 
 ## Next action
 
-Owner reviews BF-016's exposure evidence below. Owner-only local review is not
-adequately bounded: database and gateway connections succeeded from this host
-through its own non-loopback addresses, while off-host reachability remains
-unknown. Authorize a separate BF-017 containment proposal before approving any
-configuration change. Do not share the demo over a network. Remote CI, release
-preparation and production work remain separate decisions.
+Owner reviews the BF-017 diff and the running synthetic demonstration, then
+stages explicit public paths and commits manually if accepted. The next task is
+BF-018, a read-only owner-acceptance review of that committed local evidence.
+Do not share the demo over a network. Remote CI, release preparation and
+production work remain separate decisions.
 
 Run instructions, synthetic login location and stop conditions are in
-[workflow.md](docs/workflow.md). Local services are running for review with data
-preserved; stop them after use. Inspect exposure before restarting. Remote CI must be verified after
+[workflow.md](docs/workflow.md). At BF-017 closeout the application runs at
+`127.0.0.1:3000`; the database and gateway publish only on IPv4/IPv6 loopback.
+Original CLI containers remain stopped with `-before-bf017` names. Keep their
+volume, matching credentials and the private service import. Remote CI must be verified after
 an owner-controlled push; deployment still requires its own explicit decision.
 
 ## BF-014 backend completion and current evidence
@@ -353,6 +355,179 @@ or printed. Application suites and fresh HTTP status checks were not completed;
 the earlier HTTP 200 observations remain historical. No Git mutation, remote
 probe, release, deployment or production action occurred. `ROADMAP.md` is the
 only repository file changed for this assessment.
+
+## BF-017 containment investigation — 22 October 2026
+
+The initial investigation below reached an orchestration approval boundary. The
+owner subsequently explicitly approved the documented Compose replacement; its
+implementation and executed evidence follow the historical investigation.
+
+### Initial investigation evidence (superseded runtime snapshot)
+
+- Started on clean `main` at `3e3ed4e`, with an empty index; BF-015/BF-016 are
+  committed. The initial investigation changed this roadmap and two setup guides.
+- Installed Supabase CLI/package is 2.121.0. The normal startup remains
+  `pnpm db:start` → `supabase start`. Its help supports `--network-id` but exposes
+  no host-address publication flag. Both service port specifications convert
+  numeric configuration values to strings and the shared argument builder emits
+  `-p <hostPort>:<containerPort>`, without an explicit host address.
+- The existing project network configuration requests a loopback default; BF-016
+  observed wildcard publications despite it. Those runtime observations remain
+  historical: current Docker context is `desktop-linux`, but its Linux-engine
+  named pipe is absent. Selected container-binding/network/mount inspection
+  failed because the daemon was unavailable. No service recreation was attempted.
+- Windows reported zero listening sockets on 3000, 55421 and 55422. Host-origin
+  TCP checks to IPv4/IPv6 loopback and all six currently assigned preferred
+  non-loopback addresses (four IPv4 and two scoped IPv6) established no
+  connections. Both application HTTP and Auth health requests were unavailable.
+  These are unavailable-service observations, not successful containment evidence.
+- All three Windows firewall profiles are enabled with default inbound Block
+  and outbound Allow. Two enabled Public inbound Docker-backend block rules
+  were present. This narrower recheck does not establish complete effective
+  filtering or off-host isolation; the associated filters were not re-audited.
+- `pnpm lint`, standalone `pnpm typecheck` and `pnpm test` passed: 10 files,
+  91 unit tests. No new validation logic was introduced. Database readiness,
+  authentication/authorization, browser journey, data/credential continuity and
+  controlled restart were not verified. No database-creating checks or fixture
+  changes were run. No production build was required for documentation-only edits.
+
+### Mechanism and limits
+
+The [pinned argument builder](https://github.com/supabase/cli/blob/v2.121.0/apps/cli/src/command-internal/db-bootstrap/docker-create-args.ts),
+[database specification](https://github.com/supabase/cli/blob/v2.121.0/apps/cli/src/command-internal/db-bootstrap/postgres.service.ts)
+and [gateway specification](https://github.com/supabase/cli/blob/v2.121.0/apps/cli/src/commands/start/services/kong.service.ts)
+establish the omission of explicit addresses for both publications.
+[Supabase's supported network-default approach](https://supabase.com/docs/guides/local-development)
+matches the existing configuration's intent.
+[Docker documents explicit loopback publication](https://docs.docker.com/engine/network/port-publishing/)
+and network binding defaults separately. No supported explicit-address setting
+was found in the pinned startup path. The exact reason Docker Desktop did not
+honour the network default has not been established. A reported similar
+[macOS issue](https://github.com/supabase/supabase/issues/51027) is corroborating
+context, not proof of the Windows cause. A CLI upgrade, wrapper intercepting
+Docker commands or modification of existing container internals was not attempted.
+
+### Approved orchestration change
+
+Replace only Bayframe's local service orchestration with one project-owned Docker
+Compose definition, using the existing Docker platform and the same four service
+images (PostgreSQL, Auth, PostgREST and Kong), configuration and credentials.
+Retain the existing `db:start` / `db:stop` entry points as the sole normal workflow.
+This changes orchestration ownership; it does not change accepted application,
+authentication or business architecture. The owner approved this change before
+implementation; the following records its bounded scope.
+Docker's [Compose port specification](https://docs.docker.com/reference/compose-file/services/#ports)
+supports explicit host addresses and its
+[external-volume declaration](https://docs.docker.com/reference/compose-file/volumes/#external)
+fails when an existing volume is missing. Neither establishes runtime success here.
+
+- Publish PostgreSQL as `127.0.0.1:55422:5432` and `[::1]:55422:5432`, and Kong as
+  `127.0.0.1:55421:8000` and `[::1]:55421:8000`. Keep Auth and PostgREST internal;
+  retain the application's explicit IPv4 loopback binding. Validate Docker's
+  actual dual-loopback support before declaring these mappings successful.
+- First restore engine availability, then inventory only selected image, mount,
+  label, network and port fields. Privately preserve and compare existing service
+  configuration and credentials without printing them. Declare existing named
+  volumes external by their verified names; fail if any are missing. Never create
+  a substitute database volume, initialize a new database or run a reset/seed.
+- Before cutover, verify the existing database identity/data summary, migration
+  journal and credential continuity without exposing row contents or secrets.
+  Stop only verified Bayframe containers. Never attach the same PostgreSQL volume
+  to two running database processes. Keep the previous stopped containers and
+  existing configuration available until acceptance; resolve name conflicts in
+  the reviewed Compose definition, not by deleting persistent resources.
+- Add a small startup check of actual project publications, failing for absent
+  required services, unexpected project ports, empty/wildcard/non-loopback host
+  addresses or inspection failure. Cover those failures with focused tests and
+  check Windows listeners independently. Suppress credential-bearing service
+  summaries; never report ready on intended configuration alone.
+- Reconcile all affected callers: `scripts/db/local.mts` relies on the fixed
+  database container name and project label; `scripts/auth/configure.mts` obtains
+  credentials from CLI status. Preserve their ownership/credential checks while
+  adapting them to the new workflow. Review package scripts, the prepared CI
+  startup path, browser-server startup and both setup guides together. Do not
+  retain a competing CLI startup or silently replace stored credentials. Verify
+  administrative execution and Auth key discovery against the retained local
+  credentials; include the hard-coded PostgREST container check and all database
+  setup/verification callers in that compatibility review.
+- Verify loopback health, protected staff access and the existing synthetic
+  owner-review journey, then one normal stop/start cycle. Compare data, volume and
+  credential continuity across it. Repeat checks against the host's own assigned
+  non-loopback IPv4/IPv6 addresses. No off-host probes or isolation guarantees.
+  Obtain authorization before any test that creates/deletes databases or changes
+  fixtures unless the exact operation is already covered by the resumed scope.
+- Rollback: stop only the replacement services, preserve every external volume
+  and credential, and retain/restore the previous service configuration. The old
+  workflow is not a contained fallback: leave it stopped unless separately
+  authorized for diagnosis. Stop on missing credentials/volumes, unexpected data
+  differences, unrelated resource ownership, unsupported bindings or health failure.
+
+### Executed implementation and acceptance — 22 October 2026
+
+- `compose.yaml` uses the same pinned four images and existing external database
+  volume/network. One-time `db:adopt` validates the source project, imports its
+  configuration and required secrets into ignored `.auth/local-stack/`, then
+  retains original containers stopped under `-before-bf017` names. No source
+  volume, data, environment or credential was deleted, reset, reseeded or rotated.
+- `db:start` and `db:stop` now use Compose; `db:check` checks actual publications,
+  PostgreSQL readiness and Auth health. `start` and `dev` run this guard and bind
+  the app to `127.0.0.1`. Checks reject missing/stopped/extra services, wrong project
+  labels, wildcard/empty/non-loopback/duplicate/missing publications and changed
+  imported images, environment, commands, entrypoints or health/user settings.
+  A failed post-start check stops this Compose project while preserving its
+  containers and volume. An interrupted import reuses byte-identical private
+  files and refuses to overwrite mismatches.
+- Observed Docker requests and actual publications: database `5432/tcp` only at
+  `127.0.0.1:55422` and `[::1]:55422`; Kong `8000/tcp` only at
+  `127.0.0.1:55421` and `[::1]:55421`. Auth/PostgREST have no host publications.
+  Windows listeners match those four service endpoints plus `127.0.0.1:3000`.
+  There were no wildcard listeners on the three relevant ports.
+- Before and after the normal stop/start cycle, TCP connections succeeded to all
+  three ports over IPv4 loopback and both service ports over IPv6 loopback. App
+  IPv6 was unavailable as intended for its IPv4-only listener. No connections
+  succeeded to any of the three ports via the host's six assigned preferred
+  non-loopback addresses (four IPv4 and two scoped IPv6), using 1.5-second bounds.
+  No other machine, public address, router or external network was probed.
+- Container-local PostgreSQL readiness and Auth HTTP 200 passed; after restart,
+  application root/login and Auth health on both loopbacks returned HTTP 200.
+  HTTP status alone is not authorization evidence: the live permission and
+  browser denial cases below establish the protected-access behaviour. Configuration
+  equality checks compare actual containers and rendered Compose definitions with
+  the preserved source. Private fingerprints of the complete `app`/`drizzle`/`auth`
+  dump, database identity, role/password state, volume identity, `.env.local` and
+  demo credential file matched immediately across cutover. Browser tests then
+  intentionally added synthetic workflow history. A new post-test baseline
+  matched across `db:stop` → `db:start`; no database reset or reseed was used.
+- Lint, standalone typecheck, 117 unit tests in 12 files, 12 live Auth/permission
+  cases, production build and all 19 existing browser cases passed. Focused
+  validation includes unsafe IPv4/IPv6 bindings, configuration/secret changes,
+  dollar escaping, safe interrupted-import retries and project-only stop after
+  failed startup. Database-creating verification/integration suites were not run:
+  no schema/domain code changed and those operations were outside this phase's
+  preservation-only runtime checks. Browser checks exercised actual PostgreSQL
+  and the synthetic owner-review journey through handover.
+- Review corrections addressed generated-file mounts, literal-dollar handling,
+  incomplete-import retries and stopping services after a failed binding check.
+  No unresolved implementation defect remains from that review. Private files,
+  instructions and outputs remain ignored/untracked; the index remains empty.
+  No Git mutation, host configuration change, deployment or paid provisioning.
+  Final whitespace checks, 42 local Markdown file-target checks and comparison
+  against known private environment values passed; no private value appeared in
+  the 14 proposed public files.
+- Starting the previously unavailable Docker Desktop resumed another project's
+  existing containers through their restart policies. No commands targeted that
+  project's services/configuration/volumes. This platform-start side effect is
+  separate from Bayframe's scoped Compose stop/start cycle.
+
+Limits: evidence establishes local publication and host-origin behaviour on this
+machine, not off-host isolation or a production security guarantee. Fresh-machine
+and Linux CI import paths were updated but not executed remotely. Private files
+must be preserved with the volume; POSIX file modes do not prove Windows ACLs.
+No release preparation or deployment follows from these checks.
+
+Next action: owner reviews/commits the explicit public diff and performs BF-018
+read-only acceptance of the committed local demonstration; do not begin release
+or deployment work.
 
 ## BF-013 frontend redesign and evidence
 

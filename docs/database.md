@@ -8,6 +8,13 @@ and [ADR-003](adr/003-authentication.md).
 
 ## Setup (PowerShell, repository root)
 
+The local platform uses `compose.yaml`, preserving its initialized Supabase
+images, configuration, credentials and database volume. PostgreSQL and Kong
+publish explicitly on IPv4 and IPv6 loopback; Auth and PostgREST remain internal.
+`db:start` checks actual running publications, imported configuration, PostgreSQL
+readiness and Auth health before reporting success. Application `start` and `dev`
+repeat that check and bind the app to IPv4 loopback.
+
 Use the pinned Node.js/pnpm versions in [README](../README.md#setup-and-verification)
 and a running Docker Linux engine. No hosted project, account or access token is
 required. Ports 55421 (local API) and 55422 (PostgreSQL) must be free. Do not reuse
@@ -17,37 +24,67 @@ another project's database, container name or volume.
 Set-Location C:\path\to\Bayframe
 pnpm install --frozen-lockfile
 docker info --format '{{.OSType}}'
-docker network inspect supabase_network_bayframe-local --format '{{json .Options}}'
+docker compose version
 ```
 
-Expected engine: `linux`. On first setup only, if the network is absent:
+Expected engine: `linux`. Use Compose supporting raw environment files and
+`up --wait` (verified here with 5.6.0). Preserve the existing database volume,
+`.env.local`, `output/demo-credentials.txt` and `.auth/local-stack/` together.
+
+### One-time import of an existing initialized CLI project
+
+The original four Bayframe CLI services must be running with matching credentials.
+Import once:
 
 ```powershell
-docker network create -o com.docker.network.bridge.host_binding_ipv4=127.0.0.1 supabase_network_bayframe-local
+pnpm db:adopt
 ```
 
-An existing network must have `com.docker.network.bridge.host_binding_ipv4` set
-to `127.0.0.1`; stop on a mismatch. Preserve existing containers and volumes.
-This network uses the project's standard name so the CLI attaches its service
-endpoints to the same network. Do not substitute a shared network.
+This checks the fixed project, database volume and network; privately imports
+service environments, commands, health checks, aliases and required secret files
+into ignored `.auth/local-stack/`; and verifies Compose preserves their values.
+Only after preflight does it stop the original containers and rename them with
+`-before-bf017`, retaining them stopped for rollback. The existing volume is
+declared external; a missing volume fails instead of creating a replacement.
+Preserve an interrupted import and its source containers. Rerunning `db:adopt`
+reuses byte-identical captured files and refuses mismatches; after capture
+completes it can finish the identity-checked stop/rename step. Never delete its
+private files or recreate credentials as a shortcut.
+
+On a **new disposable environment only**, the pinned CLI can initialize the
+import source once with `pnpm exec supabase start`, as the prepared CI does.
+This creates a new platform and is not a recovery command for an existing database.
+Redirect its credential-bearing output to a private local file. After import,
+use only the normal Compose-backed commands below; never restart the old CLI
+services alongside them. No platform reset or seed is needed for import.
+
+### Normal startup and shutdown
 
 ```powershell
 pnpm db:start
-docker ps --filter label=com.supabase.cli.project=bayframe-local --format '{{.Names}} {{.Ports}}'
-pnpm db:setup
-pnpm db:migrate
-pnpm db:verify
+pnpm db:check
 ```
 
-Stop on any failed command. Inspect the published bindings before using the
-stack. The documented Docker network option requests loopback binding, but this
-host still reported `0.0.0.0` / `::`; isolation from the LAN is not established.
-Use only on a controlled local development machine/network and stop the stack
-when finished. Do not expose it publicly. No firewall/daemon settings are changed
-by setup. The scripts connect only to loopback, which does not itself restrict
-incoming network access.
-The CLI's start/status output contains local credentials: do not paste it into
-issues, documentation or logs intended for publication.
+Stop on a failed command. Expected: both required ports published on `127.0.0.1`
+and `::1`, no other project publications, PostgreSQL ready and Auth health 200.
+Unsafe/missing bindings or changed imported images, environments, commands or
+entrypoints prevent success; failed post-start verification stops this Compose
+project, retaining containers and volumes. Windows listeners and host-origin non-loopback
+checks supply separate host-level evidence; publication alone is not a remote
+isolation test. No firewall/daemon settings are changed.
+
+`db:stop` stops only this Compose project, preserving containers, private import
+and volumes. Never use Compose `down --volumes`, a platform reset, or restart the
+retained wildcard-publishing originals as a supposedly contained fallback.
+Preserve the existing network; its default binding is not the containment mechanism.
+
+First-time application initialization uses `db:setup`, `db:migrate`, `auth:setup`
+and `demo:seed` as appropriate to a new environment. Existing demonstrations need
+none of those mutations just to restart. `db:verify` is a separate database-creating
+check described below, not part of normal startup.
+Never publish `.auth/local-stack/`, environment files, CLI output, service logs or
+rendered `docker compose config` output: they contain local secrets. Raw service
+environment files preserve literal dollar signs and quotes.
 
 `db:setup` uses `docker exec` and the container's administrative local socket.
 It creates two unprivileged login roles with independent random passwords in
@@ -189,13 +226,16 @@ current Drizzle docs also show release-candidate APIs, so installed stable sourc
 and executed checks establish this baseline. The CLI/image pin does not prove
 another machine's Docker networking, extension support or performance. The
 documented loopback network option was configured but did not restrict published
-ports on Docker Desktop engine 29.9.1 here. Services were stopped at closeout,
-preserving volumes; do not interpret a loopback client address as proof of LAN
-isolation.
+ports on Docker Desktop engine 29.9.1 here. That is historical BF-005 evidence.
+BF-017 replaces normal CLI startup with explicit Compose loopback publications;
+see the [roadmap](../ROADMAP.md) for current runtime and restart evidence. A loopback
+client address alone still does not establish server containment.
 
 Official references checked before implementation:
 [Supabase local setup/network isolation](https://supabase.com/docs/guides/local-development),
 [CLI configuration](https://supabase.com/docs/guides/local-development/cli/config),
+[Compose ports](https://docs.docker.com/reference/compose-file/services/#ports),
+[external volumes](https://docs.docker.com/reference/compose-file/volumes/#external),
 [Drizzle pg driver](https://orm.drizzle.team/docs/get-started-postgresql),
 [custom migrations](https://orm.drizzle.team/docs/kit-custom-migrations),
 [migration journal](https://orm.drizzle.team/docs/drizzle-kit-migrate),
