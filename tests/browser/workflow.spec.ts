@@ -81,6 +81,12 @@ test("staff entry points deny anonymous and another workshop", async ({ page }) 
 });
 
 test("synthetic request, conflict handling, approved work and handover", async ({ page, browser }) => {
+  const errors: string[] = [];
+  function observe(target: Page) {
+    target.on("pageerror", () => errors.push("pageerror"));
+    target.on("console", (message) => { if (message.type() === "error") errors.push("console"); });
+  }
+  observe(page);
   const suffix = randomBytes(5).toString("hex"), name = `Browser fixture ${suffix}`, conflictName = `Conflict fixture ${suffix}`;
   const slot = futureSlot(), description = `Inspect and service fixture ${suffix}`;
 
@@ -184,8 +190,15 @@ test("synthetic request, conflict handling, approved work and handover", async (
 
   const customerContext = await browser.newContext({ baseURL: "http://127.0.0.1:3000" });
   const customer = await customerContext.newPage();
+  observe(customer);
+  const capabilityTokens = [new URL(decisionLink).hash.slice(1)];
+  let capabilityLeaks = 0;
+  customer.on("request", (request) => {
+    if (capabilityTokens.some((token) => request.url().includes(token) || (request.headers()["referer"] ?? "").includes(token))) capabilityLeaks++;
+  });
   await customer.goto(decisionLink);
   await expect(customer.getByRole("heading", { name: "Estimate version 1", exact: true })).toBeVisible();
+  expect(new URL(customer.url()).hash === "" && new URL(customer.url()).search === "").toBe(true);
   await expect(customer.getByText(description, { exact: true })).toBeVisible();
   await captureWidths(customer, "decision-issued");
   customer.once("dialog", (dialog) => dialog.accept());
@@ -220,16 +233,20 @@ test("synthetic request, conflict handling, approved work and handover", async (
   await task.getByRole("button", { name: "Add task", exact: true }).click();
   await expect(work.locator(".task-list")).toContainText(`${description} revised scope`);
   const revisedLink = await issueCurrentVersion();
+  capabilityTokens.push(new URL(revisedLink).hash.slice(1));
   await customer.goto(revisedLink);
   await expect(customer.getByRole("heading", { name: "Estimate version 3", exact: true })).toBeVisible();
+  expect(new URL(customer.url()).hash === "" && new URL(customer.url()).search === "").toBe(true);
   customer.once("dialog", (dialog) => dialog.accept());
   await customer.getByRole("button", { name: "Accept and authorize work", exact: true }).click();
   await expect(customer.locator(".status")).toHaveText("accepted");
   await captureWidths(customer, "decision-accepted");
+  expect(capabilityLeaks).toBe(0);
   await customerContext.close();
 
   const technicianContext = await browser.newContext({ baseURL: "http://127.0.0.1:3000" });
   const technician = await technicianContext.newPage();
+  observe(technician);
   await signIn(technician, "technician");
   await technician.goto(`http://127.0.0.1:3000${scheduleUrl}`);
   await expect(technician.getByRole("heading", { name: "Appointment requests and schedule", exact: true })).toHaveCount(0);
@@ -257,6 +274,12 @@ test("synthetic request, conflict handling, approved work and handover", async (
   const audit = page.getByRole("table", { name: "Latest 100 business events" });
   await expect(audit.getByRole("cell", { name: "customer-accepted", exact: true }).first()).toBeVisible();
   await expect(audit.getByRole("cell", { name: "close", exact: true }).first()).toBeVisible();
+  const approvalEvent = audit.getByRole("row").filter({ has: page.getByRole("cell", { name: "customer-accepted", exact: true }) }).first();
+  await approvalEvent.getByRole("link", { name: /^Estimate / }).click();
+  await expect(page).not.toHaveURL(/work=null/);
+  await expect(page.locator("article.work-order")).toContainText(`Booking ${reference.slice(0, 8)}`);
+  await expect(page.locator('[id^="estimate-"]:focus')).toContainText("Version 3 · accepted");
+  await page.getByRole("navigation", { name: "Staff navigation", exact: true }).getByRole("link", { name: "History", exact: true }).click();
   if (!taskAnchor) throw new Error("Task reference is missing.");
   await audit.getByRole("link", { name: `Task ${taskAnchor.slice(5,13)}`, exact: true }).first().click();
   await expect(page).toHaveURL(/view=work/);
@@ -267,6 +290,7 @@ test("synthetic request, conflict handling, approved work and handover", async (
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "output/playwright/schedule-mobile.png" });
+  expect(errors).toEqual([]);
 });
 
 test("maximum-sized synthetic job context remains readable after storage", async ({ page }) => {

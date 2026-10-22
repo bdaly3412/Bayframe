@@ -63,6 +63,17 @@ describe.skipIf(process.env.BAYFRAME_LIVE_TESTS !== "1")("actual local authentic
     await expect(getStaffMemberships()).resolves.toEqual([]);
   });
 
+  it("refreshes the real session into cookies and re-verifies protected access", async () => {
+    await signIn("manager");
+    const before = [...storedCookies.values()].join("");
+    const client = await createAuthClient();
+    const { data, error } = await client.auth.refreshSession();
+    expect(error?.name ?? null).toBeNull();
+    expect(Boolean(data.session)).toBe(true);
+    expect([...storedCookies.values()].join("") !== before).toBe(true);
+    await expect(requireStaff(workshop)).resolves.toMatchObject({ role: "manager", workshopId: workshop });
+  });
+
   it("ends the local session and denies subsequent reads", async () => {
     await signIn("manager");
     const client = await createAuthClient();

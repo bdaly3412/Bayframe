@@ -14,7 +14,7 @@ required. Ports 55421 (local API) and 55422 (PostgreSQL) must be free. Do not re
 another project's database, container name or volume.
 
 ```powershell
-Set-Location C:\Users\jpdal\Documents\Projects\Bayframe
+Set-Location C:\path\to\Bayframe
 pnpm install --frozen-lockfile
 docker info --format '{{.OSType}}'
 docker network inspect supabase_network_bayframe-local --format '{{json .Options}}'

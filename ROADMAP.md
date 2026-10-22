@@ -1,10 +1,10 @@
 # Roadmap and project state
 
-Updated: 21 October 2026.
+Updated: 22 October 2026.
 
 ## Current state
 
-The owner committed prototype completion as `d621fe2` on `main`. BF-013 implements the approved full frontend redesign on that baseline. Schedule, job sheets, resources, absences, history, staff sign-in, requests and exact-version customer decisions now share one design system. The resource timeline and detailed table remain. All twelve MVP workflows retain local implementation and runtime evidence; ADR-001 through ADR-003 remain accepted. BF-013 changes are unstaged for owner review. No repository history, remote state or deployment was changed. See the BF-013 evidence below.
+This phase began from clean `main` at `46cdb89`, including the completed BF-013 frontend. BF-014 audits and verifies the complete accepted local backend, fixes estimate-history navigation, controls absence conflicts, validates dedicated runtime credentials and handles idle connection failures. All twelve MVP workflows have current evidence in the [backend requirement matrix](docs/backend-coverage.md). ADR-001 through ADR-003 and accepted workflow policies remain unchanged. BF-014 changes are unstaged for owner review; no repository history, remote state or deployment was changed. Earlier phase evidence below is historical.
 
 The initial planning window is 20 October–16 November 2026, with a provisional
 72–100 focused-hour budget. Re-estimate after the first working database and
@@ -49,6 +49,7 @@ deliverable.
 | BF-011 / Review | Demonstration and release review; present reproducible evidence | BF-010; accepted timeline addition | Actual not recorded / Engineering | Browser journey, resource timeline and responsive review; local release boundary documented; no deployment or remote CI claim |
 | BF-012 / Done | Complete prototype acceptance and launch local preview | Committed baseline `bc34cce`; owner continuation | Actual not recorded / Engineering | Owner committed as `d621fe2`; 56 unit tests, 10 PostgreSQL cases, 11 live auth cases, two browser journeys and required gates passed; revised scope/task audit/same-tab link regressions covered |
 | BF-013 / Review | Redesign the complete frontend around schedule and job sheets | Committed prototype `d621fe2`; approved redesign scope | Actual active time not recorded / Engineering, owner review | 60 unit, 10 PostgreSQL, 11 live auth and 18 browser tests; lint, standalone typecheck, build, migrations, responsive/error evidence and final correction review pass |
+| BF-014 / Review | Complete and verify the accepted backend with supported frontend workflows | Clean `main` at `46cdb89`; complete backend phase authorized | Actual active time not recorded / Engineering, owner review | Requirement matrix, runtime fixes, direct-action tests, coordinated database races/rollback/recovery, live refresh and browser integration; current results below |
 
 BF-003 through BF-008 total roughly 14–21 hours before contingency and ADR work.
 These are planning estimates, not measured execution times or guarantees.
@@ -115,12 +116,101 @@ retains the complete workflow and includes both a resource timeline and table.
 
 ## Next action
 
-Owner reviews the BF-013 frontend and public diff, then manually stages explicit public paths, inspects the staged diff and commits if accepted. The prototype fixes are already committed as `d621fe2`; they do not need staging again. Suggested commit message: `feat: redesign workshop operations and customer flows`.
+Owner reviews BF-014 against the [backend matrix](docs/backend-coverage.md) and
+the local application, then manually stages the explicit changed public paths,
+inspects the staged diff and commits if accepted. BF-013 is already in the
+`46cdb89` baseline and does not need staging again. Suggested commit message:
+`fix: complete backend verification and workflow error handling`.
 
 Run instructions, synthetic login location and stop conditions are in
 [workflow.md](docs/workflow.md). Local services are running for review with data
 preserved; stop them after use. Inspect exposure before restarting. Remote CI must be verified after
 an owner-controlled push; deployment still requires its own explicit decision.
+
+## BF-014 backend completion and current evidence
+
+Objective: complete the accepted backend in one phase through source audit,
+necessary implementation, supported frontend integration, current checks and
+independent review. Baseline: clean `main` at `46cdb89`. Actual active time is not
+recorded. The [requirement matrix](docs/backend-coverage.md) maps policy, entry
+point, service, database enforcement and current evidence for every accepted
+capability. No accepted local requirement remains missing or blocked. Earlier
+planning questions are resolved by the accepted ADRs and later workflow policy.
+
+Changes:
+
+- Estimate history resolves the parent work order, so the link opens the exact
+  version in its job sheet rather than an unavailable `work=null` destination.
+- Reservation/absence overlap returns a controlled conflict and preserves both
+  absence and audit state on failure.
+- Dedicated runtime credentials are validated before `pg` can fall back to
+  unrelated environment defaults. Idle pool errors are safely logged; a failed
+  connection is replaced on the next query without retrying uncertain mutations.
+- Operational failures now identify the validated operation, safe category,
+  outcome and correlation UUID without printing input, SQL or capabilities.
+- Direct Server Action permission/validation/redaction coverage was added. Real
+  PostgreSQL tests replace the invalid old estimate race with coordinated valid
+  operations, both revision/approval orders, duplicate issue/decisions, monetary
+  limits and audit-failure rollback. Issued token/expiry/version/ownership and
+  line deletion remain immutable under direct SQL.
+- Browser coverage adds conflicting/successful rescheduling, cancellation,
+  rejection, absence recovery and exact estimate-history navigation. Requests,
+  customer decisions and technician completion use the real application path.
+  A real Auth refresh is also tested. Stale privilege claims and a machine-specific
+  setup path were corrected in public documentation.
+
+Executed from the repository root on 22 October 2026:
+
+| Command / check | Current result |
+| --- | --- |
+| `pnpm install --frozen-lockfile` | Passed, pnpm 11.25.0; existing lockfile preserved |
+| `pnpm lint` | Passed, zero warnings |
+| `pnpm typecheck` | Passed independently of build |
+| `pnpm test` | 91 passed across 10 files |
+| `pnpm db:verify` | Passed: 8 migrations, unchanged second-run journal, PostgreSQL 17.11 / btree_gist 1.7, platform ownership/API/runtime denial and 26 foundation rejection cases |
+| `pnpm test:integration` | 17 passed against a fresh disposable database; connections closed and only that database removed |
+| `BAYFRAME_LIVE_TESTS=1` with the documented Auth test command | 12 passed against actual local Auth/runtime, including refresh and logout |
+| `pnpm auth:setup`; `pnpm demo:seed` twice | Passed; existing synthetic credential file unchanged |
+| `pnpm db:migrate` | Existing supported database remains current; no schema/migration changes |
+| `pnpm build` | Passed with the pinned Node.js 24.13.0 / Next.js 16.4.2 runtime |
+| `pnpm test:browser` | 19 passed in Chrome, including the complete request-to-handover/revision journey and new booking/absence coverage |
+| Diff/publication checks | Empty index, formatting/local links, public text and client-bundle credential boundaries inspected; no private workflow files selected |
+
+Five coordinated estimate race pairs observed ten independent transaction lock
+waits and asserted final estimate/work/decision/audit state. The 100-booking
+diagnostic produced one confirmation, 99 controlled conflicts and two active
+allocations with pool maximum five; this is correctness evidence, not throughput.
+The recovery test terminated only its identified idle runtime connection inside
+the disposable database and verified a successful replacement query. No existing
+demonstration database, shared volume or historical record was deleted/reset.
+
+The initial browser run passed the existing 18 tests and exposed an incorrect
+selector in the new test. Targeted correction also accounted for already-open
+details elements. Independent review found that random fixture dates could collide
+with preserved bookings/absences; the corrected test checks full capacity across
+both candidate slots and advances to another weekday with a bounded search.
+The final 19-test run passed. Normal journey error counts and capability URL/
+referrer leak counts were zero; fragment capabilities are removed from the visible
+customer URL after load. No layout or design-system change was introduced.
+
+Independent source/requirements and final adversarial reviews found no remaining
+substantiated authorization, capability or transaction defect in the changed local
+paths. Mocked action tests prove entry routing/error handling; they do not replace
+the real database, Auth or browser evidence. No security certification follows.
+
+Limitations/exclusions: staff/resources/settings administration remains synthetic
+setup-only; the UI creates one estimate line while the service supports 1–50.
+Variable durations, specialized resources, physical overrun handling, automated
+messages and accounting remain excluded. Production abuse controls, TLS/cookies,
+backup/recovery, stricter revocation, network isolation, remote CI/deployment and
+real workshop validation remain unverified and require their own decisions.
+Docker's platform port exposure remains an existing local risk. The existing
+interface prerelease dependency was not changed. No dependency, architecture,
+business policy, migration, Git history or remote state changed.
+
+Next action: owner review and manual explicit-path commit if accepted. The local
+production application is available at `http://127.0.0.1:3000` for that review;
+synthetic credentials remain in ignored `output/demo-credentials.txt`.
 
 ## BF-013 frontend redesign and evidence
 

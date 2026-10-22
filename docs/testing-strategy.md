@@ -93,3 +93,15 @@ Database tests use disposable PostgreSQL databases; browser tests use only local
 synthetic demonstration records. A 100-attempt correctness diagnostic is part of
 the integration suite, with pool max five; it is not a throughput benchmark.
 CI is prepared; remote execution remains unverified.
+
+BF-014 replaces the earlier estimate race that started after the old link was
+already invalidated. Coordinated independent connections now exercise both valid
+approval/revision orders, duplicate issuance, identical replay and contradictory
+decisions, with observed lock waits and persisted-state/audit assertions. Injected
+audit failures prove issue and decision rollback. A disposable database connection
+termination verifies safe idle-pool handling and subsequent recovery. Direct-action
+tests cover permission routing and redacted error responses; live Auth tests also
+refresh a real session. Browser coverage includes conflict-preserving rescheduling,
+cancellation/rejection, absence recovery, exact estimate history navigation and
+capability URL/referrer checks. The [coverage matrix](backend-coverage.md) identifies
+which evidence uses real services/database behaviour and which uses mocks.

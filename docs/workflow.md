@@ -69,7 +69,7 @@ new version if the link is lost. No real customer messages are sent.
   replaces both allocations atomically; failure preserves the original booking.
   Check-in creates at most one work order and fixes its technician assignment.
 - Managers record resource absences in **Absences**. An absence overlapping a reservation is
-  rejected; resolve the booking first. There is no absence-editing UI.
+  rejected with a controlled conflict; resolve the booking first. There is no absence-editing UI.
 - Overruns require staff intervention and rescheduling before check-in. Once
   checked in, the planned interval remains the reservation. This application
   does not measure physical occupancy or safely auto-extend an overrun. Awaiting
@@ -112,6 +112,8 @@ unavailable.
 
 The manager-only **History** view links each event to its booking, work order, estimate or resource.
 New task-addition/completion events also link to the exact task with actor/time.
+Estimate events resolve the owning work order so their links open the exact
+version in its job sheet; this read projection does not alter stored history.
 Earlier events retain their originally recorded detail; missing historical task
 identifiers are not reconstructed.
 
@@ -167,3 +169,8 @@ backup/recovery, real operator validation or real-customer readiness is claimed.
 Docker still publishes local platform ports on all interfaces on the tested host;
 network isolation remains unproved. Stop local services with `pnpm db:stop` when
 finished, preserving volumes.
+
+The [backend requirement matrix](backend-coverage.md) maps accepted requirements
+to entry points, services, database rules, current tests and explicit exclusions.
+It includes direct-action denial/redaction tests, real coordinated estimate
+races, audit-failure rollback, session refresh and idle connection recovery.

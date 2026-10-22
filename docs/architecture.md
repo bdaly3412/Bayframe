@@ -106,3 +106,11 @@ test isolation before any approved deployment.
 Record operation, safe identifiers, correlation ID, outcome and useful error
 classification. Exclude tokens, credentials, request bodies and unnecessary PII.
 Audit events are durable business history; operational logs do not replace them.
+
+Unexpected action failures record a validated operation name, safe failure category,
+outcome and correlation UUID without raw errors or input. Idle pool errors are
+handled without crashing the process; failed clients are removed by the driver
+and a subsequent operation obtains a replacement connection. Missing/invalid
+dedicated runtime credentials fail configuration before driver defaults apply.
+Uncertain mutations are never retried automatically. See the
+[current backend evidence](backend-coverage.md).

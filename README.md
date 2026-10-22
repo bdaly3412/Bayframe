@@ -8,7 +8,7 @@ The initial release targets one workshop.
 
 ## Current status
 
-Local demonstration, 21 October 2026. Staff sign-in, scoped resource access,
+Local demonstration, backend reverified 22 October 2026. Staff sign-in, scoped resource access,
 appointment requests, transactional bay/technician allocation, work orders,
 immutable estimate versions and restricted customer decisions are implemented.
 ADR-001 through ADR-003 remain accepted. Local unit, database and browser evidence
@@ -33,6 +33,7 @@ successfully confirms the booking.
 | Document | Purpose |
 | --- | --- |
 | [Roadmap](ROADMAP.md) | Milestones, local task board, acceptance evidence and next action |
+| [Backend coverage](docs/backend-coverage.md) | Accepted requirement-to-evidence matrix and explicit exclusions |
 | [Demonstration guide](docs/workflow.md) | Run commands, complete journey, accepted policies, checks and limits |
 | [Stack](STACK.md) | Pinned foundation, later selections and dependency policy |
 | [Product requirements](docs/product-requirements.md) | Users, workflow, acceptance criteria, scope and open questions |

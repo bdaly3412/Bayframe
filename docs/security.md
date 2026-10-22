@@ -50,12 +50,19 @@ and both allowed/denied queries; application checks alone do not secure an
 accidentally public alternate interface.
 
 Verified local boundary: `app` is absent from API exposure and API roles have no
-schema/table privileges. Runtime cannot write business data, read auth identities
-or the migration journal, perform DDL or assume migration privileges. The migrator
+schema/table privileges. Runtime has the workflow SELECT/INSERT and column-level
+UPDATE grants described above, plus guarded identity-column UPDATE for row locking.
+It cannot change staff activity or workshop settings, delete/truncate history,
+read auth identities or the migration journal, perform DDL or assume migration privileges. The migrator
 has only auth schema USAGE and REFERENCES on `auth.users.id`, with no auth DML.
 Supabase retains auth object ownership. See [database verification](database.md).
 No user-JWT RLS context or workshop authorization is supplied by these connections;
 verified sessions and scoped application membership enforce workshop access.
+
+BF-014 coverage and current verification are in [backend coverage](backend-coverage.md).
+Unexpected action failures log only the validated operation, safe failure category,
+outcome and correlation UUID. Idle database-pool failures use the same restricted
+shape. Raw database errors, SQL, input, credentials and capabilities are not logged.
 
 ## Customer requests and approval links
 

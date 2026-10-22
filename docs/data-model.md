@@ -74,8 +74,10 @@ synthetic workshop uses `Europe/London`. DST input handling remains future work.
 Staff references the actual platform-owned `auth.users(id)` UUID primary key.
 Auth identity updates/deletes and workshop/staff key changes/deletes are restricted
 when referenced. No cascades remove operational records. Deactivate staff/resources
-instead of deleting them. Runtime has SELECT only; future authorized write paths
-must explicitly introduce their needed grants and permission checks. Retention,
+instead of deleting them. BF-006 initially granted runtime SELECT only. Workflow
+migrations subsequently added scoped operation grants and guarded identity-column
+UPDATE for row locking; staff activity and workshop settings remain setup-only.
+Current privilege and operation evidence is in [backend coverage](backend-coverage.md). Retention,
 anonymization and authorized correction are still undefined.
 
 ## Scheduling constraints

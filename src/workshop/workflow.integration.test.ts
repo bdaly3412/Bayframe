@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { admin, connect } from "../../scripts/db/local.mts";
 import { pool } from "../db/index.ts";
@@ -21,6 +21,41 @@ let migrator: Awaited<ReturnType<typeof connect>>;
 
 const slot = (hour: number, day = 7) => new Date(`2031-04-${String(day).padStart(2, "0")}T${String(hour).padStart(2, "0")}:00:00+01:00`);
 const request = (hour: number, day = 7) => createRequest({ workshopId, name: "Fixture Customer", email: "fixture@example.test", registration: `T${day}${hour}`, startAt: slot(hour, day).toISOString() });
+async function waitForLocks(expected: number) {
+  const deadline = Date.now() + 3000;
+  while (Date.now() < deadline) {
+    const count = Number(admin("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND usename='bayframe_runtime' AND state='active' AND wait_event_type='Lock'", process.env.BAYFRAME_DATABASE));
+    if (count >= expected) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`Expected ${expected} independent transactions waiting for locks`);
+}
+async function queuedWorkRace(workId: string, first: () => Promise<unknown>, second: () => Promise<unknown>) {
+  await raw.query("BEGIN");
+  await raw.query("SELECT id FROM app.work_orders WHERE id=$1 FOR UPDATE", [workId]);
+  const pending: Promise<PromiseSettledResult<unknown>>[] = [];
+  const start = (operation: () => Promise<unknown>) => pending.push(operation().then(
+    (value) => ({ status: "fulfilled" as const, value }),
+    (reason: unknown) => ({ status: "rejected" as const, reason }),
+  ));
+  try {
+    start(first);
+    await waitForLocks(1);
+    start(second);
+    await waitForLocks(2);
+  } finally {
+    await raw.query("ROLLBACK");
+    await Promise.all(pending);
+  }
+  return Promise.all(pending);
+}
+async function plannedWork(hour: number, day: number) {
+  const bookingId = await request(hour, day);
+  await allocate(manager, { bookingId, bayId, technicianId: technicianResourceId });
+  const workId = await checkIn(manager, bookingId);
+  await addTask(manager, workId, "Synthetic approved scope");
+  return workId;
+}
 beforeAll(async () => {
   admin(`INSERT INTO auth.users (id) VALUES ${authIds.map((id) => `('${id}')`).join(",")};`, process.env.BAYFRAME_DATABASE);
   migrator = await connect("bayframe_migrator", process.env.BAYFRAME_DATABASE);
@@ -37,6 +72,42 @@ afterAll(async () => {
 });
 
 describe("workflow against local PostgreSQL", () => {
+  it("logs a lost idle connection safely and serves the next pool query", async () => {
+    const database = process.env.BAYFRAME_DATABASE!;
+    expect(/^bf_verify_[a-f0-9]{16}$/.test(database)).toBe(true);
+    const client = await pool.connect();
+    let pid: number;
+    try {
+      const identity = (await client.query("SELECT pg_backend_pid() AS pid,current_database() AS database")).rows[0];
+      expect(identity.database).toBe(database);
+      pid = identity.pid;
+      expect(Number.isInteger(pid) && pid > 0).toBe(true);
+    } finally {
+      client.release();
+    }
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let observe: (() => void) | undefined;
+    try {
+      const lost = new Promise<void>((resolve, reject) => {
+        observe = resolve;
+        pool.once("error", observe);
+        timeout = setTimeout(() => reject(new Error("Idle pool error was not observed")), 3000);
+      });
+      expect(admin(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid=${pid} AND datname=current_database() AND usename='bayframe_runtime' AND state='idle'`, database)).toBe("t");
+      await lost;
+      expect(log).toHaveBeenCalledTimes(1);
+      const record = JSON.parse(log.mock.calls[0][0] as string);
+      expect(Object.keys(record).sort()).toEqual(["correlationId", "errorClass", "operation", "outcome"]);
+      expect(record).toMatchObject({ operation: "database-pool", outcome: "failed", errorClass: "database-connection", correlationId: expect.any(String) });
+      expect((await pool.query("SELECT 1 AS value")).rows[0].value).toBe(1);
+    } finally {
+      clearTimeout(timeout);
+      if (observe) pool.off("error", observe);
+      log.mockRestore();
+    }
+  });
+
   it("projects permitted work actions through start, rejection, revision and current approval", async () => {
     const bookingId = await request(10, 21);
     await allocate(manager, { bookingId, bayId, technicianId: technicianResourceId });
@@ -111,12 +182,18 @@ describe("workflow against local PostgreSQL", () => {
     expect((await raw.query("SELECT count(*)::int AS n FROM app.allocations WHERE booking_id=$1", [bookingId])).rows[0].n).toBe(0);
     await allocate(manager, { bookingId, bayId, technicianId: technicianResourceId });
     await expect(availability(workshopId, startAt.toISOString())).resolves.toEqual({ bays: 1, technicians: 1 });
+    await expect(recordAbsence(manager, bayId, startAt, endAt)).rejects.toThrow(WorkflowError);
+    expect((await raw.query("SELECT count(*)::int AS n FROM app.absences WHERE resource_id=$1", [bayId])).rows[0].n).toBe(0);
+    expect((await raw.query("SELECT count(*)::int AS n FROM app.audit_events WHERE resource_id=$1 AND action='absence-recorded'", [bayId])).rows[0].n).toBe(0);
     await recordAbsence(manager, secondBayId, startAt, endAt);
     await recordAbsence(manager, secondTechnicianResourceId, startAt, endAt);
     await expect(availability(workshopId, startAt.toISOString())).resolves.toEqual({ bays: 0, technicians: 0 });
     await expect(availability(workshopId, endAt.toISOString())).resolves.toEqual({ bays: 2, technicians: 2 });
     await cancelBooking(manager, bookingId);
     await expect(availability(workshopId, startAt.toISOString())).resolves.toEqual({ bays: 1, technicians: 1 });
+    await recordAbsence(manager, bayId, slot(14, 22), slot(15, 22));
+    expect((await raw.query("SELECT count(*)::int AS n FROM app.absences WHERE resource_id=$1", [bayId])).rows[0].n).toBe(1);
+    expect((await raw.query("SELECT count(*)::int AS n FROM app.audit_events WHERE resource_id=$1 AND action='absence-recorded'", [bayId])).rows[0].n).toBe(1);
     await expect(availability(otherWorkshopId, startAt.toISOString())).rejects.toThrow(WorkflowError);
   });
 
@@ -141,7 +218,7 @@ describe("workflow against local PostgreSQL", () => {
     expect(view.audit).toEqual(expect.arrayContaining([
       expect.objectContaining({ bookingId, action: "confirmed" }),
       expect.objectContaining({ workOrderId: workId, action: "task-completed", details: { taskId } }),
-      expect.objectContaining({ estimateId, action: "customer-accepted" }),
+      expect.objectContaining({ estimateId, workOrderId: workId, action: "customer-accepted" }),
       expect.objectContaining({ resourceId: secondBayId, action: "absence-recorded" }),
     ]));
     expect(Object.keys(view.audit[0])).toEqual(expect.arrayContaining(["bookingId", "workOrderId", "estimateId", "resourceId", "details"]));
@@ -191,6 +268,11 @@ describe("workflow against local PostgreSQL", () => {
     const lineId = (await raw.query("SELECT id FROM app.estimate_lines WHERE estimate_id=$1", [estimateId])).rows[0].id;
     await expect(migrator.query("UPDATE app.estimate_lines SET unit_price=999 WHERE id=$1", [lineId])).rejects.toMatchObject({ code: "23514" });
     await expect(migrator.query("UPDATE app.estimates SET total=1 WHERE id=$1", [estimateId])).rejects.toMatchObject({ code: "23514" });
+    for (const change of ["token_hash=repeat('e',64)", "expires_at=expires_at+interval '1 hour'", "version=version+1", "work_order_id=gen_random_uuid()"]) {
+      await expect(migrator.query(`UPDATE app.estimates SET ${change} WHERE id=$1`, [estimateId])).rejects.toMatchObject({ code: "23514" });
+    }
+    await expect(migrator.query("UPDATE app.estimate_lines SET estimate_id=gen_random_uuid() WHERE id=$1", [lineId])).rejects.toMatchObject({ code: "23514" });
+    await expect(migrator.query("DELETE FROM app.estimate_lines WHERE id=$1", [lineId])).rejects.toMatchObject({ code: "23514" });
     await expect(raw.query("UPDATE app.staff SET id=$1 WHERE id=$2", [randomUUID(), managerId])).rejects.toMatchObject({ code: "23514" });
     expect((await previewDecision(token)).total).toBe(600);
 
@@ -311,6 +393,125 @@ describe("workflow against local PostgreSQL", () => {
     expect(final).toMatchObject({ state: "confirmed", active: 2, aligned: true });
   });
 
+  it.each([true, false])("serializes a valid approval and replacement scope, decision first: %s", async (decisionFirst) => {
+    const workId = await plannedWork(decisionFirst ? 9 : 10, 28);
+    const original = await createEstimate(manager, workId, [{ description: "Original", quantity: 1, unitPrice: 300 }]);
+    const token = await issueEstimate(manager, original);
+    let replacement = "";
+    const decide = () => decideEstimate(token, "accepted");
+    const revise = async () => {
+      replacement = await createEstimate(manager, workId, [{ description: "Replacement", quantity: 1, unitPrice: 400 }]);
+      await issueEstimate(manager, replacement);
+    };
+    const results = await queuedWorkRace(workId, decisionFirst ? decide : revise, decisionFirst ? revise : decide);
+    expect(results.map((result) => result.status)).toEqual(decisionFirst ? ["fulfilled", "fulfilled"] : ["fulfilled", "rejected"]);
+    if (!decisionFirst && results[1].status === "rejected") expect(results[1].reason instanceof WorkflowError).toBe(true);
+    const originalRow = (await raw.query("SELECT state,(SELECT count(*)::int FROM app.decisions WHERE estimate_id=$1) AS decisions FROM app.estimates WHERE id=$1", [original])).rows[0];
+    expect(originalRow).toEqual({ state: decisionFirst ? "accepted" : "superseded", decisions: decisionFirst ? 1 : 0 });
+    expect((await raw.query("SELECT state FROM app.estimates WHERE id=$1", [replacement])).rows[0].state).toBe("issued");
+    expect((await raw.query("SELECT state FROM app.work_orders WHERE id=$1", [workId])).rows[0].state).toBe("awaiting-approval");
+    expect((await raw.query("SELECT count(*)::int AS n FROM app.audit_events WHERE estimate_id=$1 AND action='customer-accepted'", [original])).rows[0].n).toBe(decisionFirst ? 1 : 0);
+  });
+
+  it("serializes duplicate issue and identical or contradictory decision submissions", async () => {
+    const workId = await plannedWork(11, 28);
+    const estimateId = await createEstimate(manager, workId, [{ description: "Concurrent scope", quantity: 1, unitPrice: 100 }]);
+    const issued = await queuedWorkRace(workId, () => issueEstimate(manager, estimateId), () => issueEstimate(adviser, estimateId));
+    expect(issued.map((result) => result.status)).toEqual(["fulfilled", "rejected"]);
+    if (issued[0].status !== "fulfilled" || typeof issued[0].value !== "string") throw new Error("Initial issue did not return a capability");
+    const token = issued[0].value;
+    const identical = await queuedWorkRace(workId, () => decideEstimate(token, "accepted"), () => decideEstimate(token, "accepted"));
+    expect(identical.map((result) => result.status)).toEqual(["fulfilled", "fulfilled"]);
+    expect(identical.map((result) => result.status === "fulfilled" ? result.value : undefined)).toEqual(["recorded", "already-recorded"]);
+    const next = await createEstimate(manager, workId, [{ description: "Contradictory scope", quantity: 1, unitPrice: 200 }]);
+    const nextToken = await issueEstimate(manager, next);
+    const contradictory = await queuedWorkRace(workId, () => decideEstimate(nextToken, "rejected"), () => decideEstimate(nextToken, "accepted"));
+    expect(contradictory.map((result) => result.status)).toEqual(["fulfilled", "rejected"]);
+    if (contradictory[1].status === "rejected") expect(contradictory[1].reason instanceof WorkflowError).toBe(true);
+    expect((await raw.query("SELECT estimate_id,decision FROM app.decisions WHERE estimate_id=ANY($1::uuid[]) ORDER BY decision", [[estimateId, next]])).rows).toEqual([{ estimate_id: estimateId, decision: "accepted" }, { estimate_id: next, decision: "rejected" }]);
+    expect((await raw.query("SELECT count(*)::int AS n FROM app.audit_events WHERE estimate_id=$1 AND action='estimate-issued'", [estimateId])).rows[0].n).toBe(1);
+    expect((await raw.query("SELECT count(*)::int AS n FROM app.audit_events WHERE estimate_id=ANY($1::uuid[]) AND action IN ('customer-accepted','customer-rejected')", [[estimateId, next]])).rows[0].n).toBe(2);
+  });
+
+  it("rolls issue and decision state back when their audit insert fails", async () => {
+    const workId = await plannedWork(9, 29);
+    const original = await createEstimate(manager, workId, [{ description: "Prior scope", quantity: 1, unitPrice: 100 }]);
+    await issueEstimate(manager, original);
+    const estimateId = await createEstimate(manager, workId, [{ description: "Replacement scope", quantity: 1, unitPrice: 200 }]);
+    await migrator.query(`CREATE FUNCTION app.test_fail_estimate_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action IN ('estimate-issued','customer-accepted') THEN RAISE EXCEPTION 'injected estimate audit failure' USING ERRCODE='P0001'; END IF; RETURN NEW; END $$;
+      CREATE TRIGGER test_fail_estimate_audit BEFORE INSERT ON app.audit_events FOR EACH ROW EXECUTE FUNCTION app.test_fail_estimate_audit()`);
+    try {
+      await expect(issueEstimate(manager, estimateId)).rejects.toThrow();
+      expect((await raw.query("SELECT state,token_hash,issued_at,expires_at FROM app.estimates WHERE id=$1", [estimateId])).rows[0]).toEqual({ state: "draft", token_hash: null, issued_at: null, expires_at: null });
+      expect((await raw.query("SELECT state FROM app.estimates WHERE id=$1", [original])).rows[0].state).toBe("issued");
+      expect((await raw.query("SELECT count(*)::int AS n FROM app.audit_events WHERE estimate_id=$1 AND action='estimate-superseded'", [original])).rows[0].n).toBe(0);
+      await migrator.query("ALTER TABLE app.audit_events DISABLE TRIGGER test_fail_estimate_audit");
+      const token = await issueEstimate(manager, estimateId);
+      await migrator.query("ALTER TABLE app.audit_events ENABLE TRIGGER test_fail_estimate_audit");
+      await expect(decideEstimate(token, "accepted")).rejects.toThrow();
+      expect((await raw.query("SELECT state FROM app.estimates WHERE id=$1", [estimateId])).rows[0].state).toBe("issued");
+      expect((await raw.query("SELECT state FROM app.work_orders WHERE id=$1", [workId])).rows[0].state).toBe("awaiting-approval");
+      expect((await raw.query("SELECT count(*)::int AS n FROM app.decisions WHERE estimate_id=$1", [estimateId])).rows[0].n).toBe(0);
+      expect((await raw.query("SELECT count(*)::int AS n FROM app.audit_events WHERE estimate_id=$1 AND action='customer-accepted'", [estimateId])).rows[0].n).toBe(0);
+    } finally {
+      await migrator.query("DROP TRIGGER test_fail_estimate_audit ON app.audit_events; DROP FUNCTION app.test_fail_estimate_audit()");
+    }
+  });
+
+  it("persists multi-line quantities, per-line VAT and exact monetary limits", async () => {
+    const workId = await plannedWork(10, 29);
+    const lines = [{ description: "Two small parts", quantity: 2, unitPrice: 3 }, { description: "Rounded separately", quantity: 1, unitPrice: 3 }];
+    const estimateId = await createEstimate(manager, workId, lines);
+    const token = await issueEstimate(manager, estimateId);
+    const preview = await previewDecision(token);
+    expect({ net: preview.net, tax: preview.tax, total: preview.total }).toEqual({ net: 9, tax: 2, total: 11 });
+    expect(preview.lines).toEqual(expect.arrayContaining(lines));
+    await expect(migrator.query("UPDATE app.estimate_lines SET quantity=3 WHERE estimate_id=$1", [estimateId])).rejects.toMatchObject({ code: "23514" });
+    const limitLines = Array.from({ length: 50 }, (_, index) => ({ description: `Line ${index + 1}`, quantity: 2, unitPrice: 1000000 }));
+    const limit = await createEstimate(manager, workId, limitLines);
+    const limitToken = await issueEstimate(manager, limit);
+    const limitPreview = await previewDecision(limitToken);
+    expect(limitPreview.lines).toHaveLength(50);
+    expect({ net: limitPreview.net, tax: limitPreview.tax, total: limitPreview.total }).toEqual({ net: 100000000, tax: 20000000, total: 120000000 });
+    await expect(createEstimate(manager, workId, [{ description: "Over limit", quantity: 101, unitPrice: 1000000 }])).rejects.toThrow(WorkflowError);
+    expect((await raw.query("SELECT count(*)::int AS n FROM app.estimates WHERE work_order_id=$1", [workId])).rows[0].n).toBe(2);
+  });
+
+  it("denies sensitive mutations for wrong-role, foreign, inactive and unassigned actors", async () => {
+    const bookingId = await request(10, 30);
+    const workId = await plannedWork(11, 30);
+    const estimateId = await createEstimate(manager, workId, [{ description: "Protected scope", quantity: 1, unitPrice: 100 }]);
+    const operatorMutations = (actor: Actor) => [
+      () => allocate(actor, { bookingId, bayId, technicianId: technicianResourceId }),
+      () => cancelBooking(actor, bookingId),
+      () => checkIn(actor, bookingId),
+      () => addTask(actor, workId, "Forbidden task"),
+      () => createEstimate(actor, workId, [{ description: "Forbidden estimate", quantity: 1, unitPrice: 100 }]),
+      () => issueEstimate(actor, estimateId),
+      () => updateWork(actor, workId, "close"),
+      () => recordAbsence(actor, secondBayId, slot(14, 30), slot(15, 30)),
+    ];
+    for (const actor of [technician, foreignManager]) {
+      for (const operation of operatorMutations(actor)) await expect(operation()).rejects.toThrow(WorkflowError);
+    }
+    await expect(recordAbsence(adviser, secondBayId, slot(14, 30), slot(15, 30))).rejects.toThrow(WorkflowError);
+    for (const operation of ["start", "task", "complete"] as const) {
+      await expect(updateWork(otherTechnician, workId, operation, randomUUID())).rejects.toThrow(WorkflowError);
+    }
+    await migrator.query("UPDATE app.staff SET active=false WHERE id=$1", [managerId]);
+    try {
+      for (const operation of operatorMutations(manager)) await expect(operation()).rejects.toThrow(WorkflowError);
+      await expect(updateWork(manager, workId, "start")).rejects.toThrow(WorkflowError);
+    } finally {
+      await migrator.query("UPDATE app.staff SET active=true WHERE id=$1", [managerId]);
+    }
+    expect((await raw.query("SELECT state FROM app.bookings WHERE id=$1", [bookingId])).rows[0].state).toBe("requested");
+    expect((await raw.query("SELECT state FROM app.work_orders WHERE id=$1", [workId])).rows[0].state).toBe("ready");
+    expect((await raw.query("SELECT state FROM app.estimates WHERE id=$1", [estimateId])).rows[0].state).toBe("draft");
+    expect((await raw.query("SELECT count(*)::int AS n FROM app.tasks WHERE work_order_id=$1", [workId])).rows[0].n).toBe(1);
+    expect((await raw.query("SELECT count(*)::int AS n FROM app.estimates WHERE work_order_id=$1", [workId])).rows[0].n).toBe(1);
+  });
+
   it("enforces technician assignment, stale decisions, expiry, and 100-way shared-resource contention", async () => {
     const bookingId = await request(9);
     await allocate(manager, { bookingId, bayId, technicianId: technicianResourceId });
@@ -333,16 +534,6 @@ describe("workflow against local PostgreSQL", () => {
     await expect(previewDecision(newToken)).rejects.toThrow(WorkflowError);
     await expect(decideEstimate(newToken, "accepted")).rejects.toThrow(WorkflowError);
     await expect(issueEstimate(adviser, oldEstimate)).rejects.toThrow(WorkflowError);
-
-    const raceOld = await createEstimate(manager, workId, [{ description: "Current approval", quantity: 1, unitPrice: 300 }]);
-    const raceToken = await issueEstimate(manager, raceOld);
-    const raceNew = await createEstimate(manager, workId, [{ description: "Revised approval", quantity: 1, unitPrice: 400 }]);
-    const race = await Promise.allSettled([decideEstimate(raceToken, "accepted"), issueEstimate(manager, raceNew)]);
-    expect(race[1].status).toBe("fulfilled");
-    const raceState = await raw.query(`SELECT e.state, (SELECT count(*)::int FROM app.decisions d WHERE d.estimate_id=e.id) AS decisions
-      FROM app.estimates e WHERE e.id=$1`, [raceOld]);
-    expect([["accepted", 1], ["superseded", 0]]).toContainEqual([raceState.rows[0].state, raceState.rows[0].decisions]);
-    expect((await raw.query("SELECT state FROM app.estimates WHERE id=$1", [raceNew])).rows[0].state).toBe("issued");
 
     const contenders = await Promise.all(Array.from({ length: 100 }, (_, i) => createRequest({ workshopId, name: `Contender ${i}`, email: "fixture@example.test", registration: `C${i}`, startAt: slot(16).toISOString() })));
     const started = performance.now();

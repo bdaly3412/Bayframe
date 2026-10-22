@@ -232,12 +232,20 @@ export async function decideEstimate(token: string, decision: "accepted" | "reje
 
 export async function recordAbsence(actor: Actor, resourceId: string, startAt: Date, endAt: Date) {
   uuid.parse(resourceId); ensure(Number.isFinite(startAt.getTime()) && Number.isFinite(endAt.getTime()) && startAt < endAt, "Absence must have a valid start and end.");
-  return withActor(actor, ["manager"], async (tx) => {
-    const [resource] = await tx.select().from(resources).where(and(eq(resources.id, resourceId), eq(resources.workshopId, actor.workshopId))).for("update");
-    ensure(resource, "Resource not found.");
-    await tx.insert(absences).values({ workshopId: actor.workshopId, resourceId, startAt, endAt });
-    await audit(tx, actor.workshopId, actor.id, { resourceId }, "absence-recorded");
-  });
+  try {
+    return await withActor(actor, ["manager"], async (tx) => {
+      const [resource] = await tx.select().from(resources).where(and(eq(resources.id, resourceId), eq(resources.workshopId, actor.workshopId))).for("update");
+      ensure(resource, "Resource not found.");
+      await tx.insert(absences).values({ workshopId: actor.workshopId, resourceId, startAt, endAt });
+      await audit(tx, actor.workshopId, actor.id, { resourceId }, "absence-recorded");
+    });
+  } catch (error) {
+    const cause = error && typeof error === "object" && "cause" in error ? error.cause : error;
+    if (cause && typeof cause === "object" && "code" in cause && cause.code === "23514" && "message" in cause && cause.message === "Absence conflicts with a reservation") {
+      throw new WorkflowError("Absence overlaps a reservation. Reschedule or cancel the booking first.");
+    }
+    throw error;
+  }
 }
 
 export async function workspace(actor: Actor) {
@@ -263,7 +271,8 @@ export async function workspace(actor: Actor) {
     const estimateRows = await tx.select({ id: estimates.id, workOrderId: estimates.workOrderId, version: estimates.version, state: estimates.state, net: estimates.net, tax: estimates.tax, total: estimates.total }).from(estimates).where(eq(estimates.workshopId, actor.workshopId)).orderBy(estimates.version);
     const lineRows = await tx.select().from(estimateLines).where(eq(estimateLines.workshopId, actor.workshopId));
     const reservationRows = await tx.select({ id: allocations.id, resourceId: allocations.resourceId, bookingId: allocations.bookingId, startAt: allocations.startAt, endAt: allocations.endAt }).from(allocations).where(and(eq(allocations.workshopId, actor.workshopId), isNull(allocations.releasedAt)));
-    const auditRows = actor.role === "manager" ? await tx.select({ id: auditEvents.id, action: auditEvents.action, createdAt: auditEvents.createdAt, actorId: auditEvents.actorId, bookingId: auditEvents.bookingId, workOrderId: auditEvents.workOrderId, estimateId: auditEvents.estimateId, resourceId: auditEvents.resourceId, details: auditEvents.details }).from(auditEvents).where(eq(auditEvents.workshopId, actor.workshopId)).orderBy(sql`${auditEvents.createdAt} DESC`).limit(100) : [];
+    const auditRows = actor.role === "manager" ? await tx.select({ id: auditEvents.id, action: auditEvents.action, createdAt: auditEvents.createdAt, actorId: auditEvents.actorId, bookingId: auditEvents.bookingId, workOrderId: sql<string | null>`coalesce(${auditEvents.workOrderId}, ${estimates.workOrderId})`, estimateId: auditEvents.estimateId, resourceId: auditEvents.resourceId, details: auditEvents.details }).from(auditEvents)
+      .leftJoin(estimates, and(eq(estimates.id, auditEvents.estimateId), eq(estimates.workshopId, actor.workshopId))).where(eq(auditEvents.workshopId, actor.workshopId)).orderBy(sql`${auditEvents.createdAt} DESC`).limit(100) : [];
     return { workshop, assignedSchedule: [], resources: resourceRows, bookings: bookingRows, allocations: reservationRows, workOrders: workWithCapabilities, tasks: taskRows, estimates: estimateRows, lines: lineRows, audit: auditRows, absences: await tx.select().from(absences).where(eq(absences.workshopId, actor.workshopId)) };
   });
 }

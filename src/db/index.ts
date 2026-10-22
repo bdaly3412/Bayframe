@@ -11,5 +11,8 @@ export const pool = new Pool({
   statement_timeout: 10000,
   idleTimeoutMillis: 10000,
 });
+pool.on("error", () => {
+  console.error(JSON.stringify({ operation: "database-pool", outcome: "failed", errorClass: "database-connection", correlationId: crypto.randomUUID() }));
+});
 
 export const db = drizzle(pool, { schema });
